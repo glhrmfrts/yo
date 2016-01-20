@@ -1,10 +1,13 @@
 package main
 
 import (
-	"github.com/glhrmfrts/elo-lang/elo"
+  "fmt"
+	"github.com/glhrmfrts/elo-lang/elo/parse"
+  "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
 func main() {
-	ast := elo.Parse("a + 2")
-	elo.Prettyprint(ast)
+	root := parse.Parse("hello", "test")
+  out := ast.Prettyprint(root)
+  fmt.Println(out)
 }
