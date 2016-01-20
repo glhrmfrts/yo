@@ -224,18 +224,25 @@ func (t *tokenizer) nextToken() (token, string) {
       }
       return TOKEN_DIV, string(t.r)
     }
+    var tok = -1
     switch t.r {
-    case '+': return TOKEN_PLUS, string(t.r)
-    case '-': return TOKEN_MINUS, string(t.r)
-    case '*': return TOKEN_MULT, string(t.r)
-    case '<': return t.maybe2(TOKEN_LT, '=', TOKEN_LTEQ, '<', TOKEN_LTLT), string(t.r)
-    case '>': return t.maybe2(TOKEN_GT, '=', TOKEN_GTEQ, '>', TOKEN_GTGT), string(t.r)
-    case '=': return t.maybe1(TOKEN_EQ, '=', TOKEN_EQEQ), string(t.r)
-    case ':': return TOKEN_COLON, string(t.r)
-    case '[': return TOKEN_LBRACK, string(t.r)
-    case ']': return TOKEN_RBRACK, string(t.r)
-    case '{': return TOKEN_LBRACE, string(t.r)
-    case '}': return TOKEN_RBRACE, string(t.r)
+    case '+': tok = TOKEN_PLUS
+    case '-': tok = TOKEN_PLUS
+    case '*': tok = TOKEN_PLUS
+    case '<': tok = t.maybe2(TOKEN_LT, '=', TOKEN_LTEQ, '<', TOKEN_LTLT)
+    case '>': tok = t.maybe2(TOKEN_GT, '=', TOKEN_GTEQ, '>', TOKEN_GTGT)
+    case '=': tok = t.maybe1(TOKEN_EQ, '=', TOKEN_EQEQ)
+    case ':': tok = TOKEN_COLON
+    case '(': tok = TOKEN_LPAREN
+    case '(': tok = TOKEN_RPAREN
+    case '[': tok = TOKEN_LBRACK
+    case ']': tok = TOKEN_RBRACK
+    case '{': tok = TOKEN_LBRACE
+    case '}': tok = TOKEN_RBRACE
+    }
+
+    if tok != -1 {
+      return tok, string(t.r)
     }
   }
 
