@@ -57,15 +57,74 @@ func (p *parser) primaryExpr() ast.Node {
       return &ast.Number{Value: p.literal}
     case TOKEN_ID:
       return &ast.Id{Value: p.literal}
+    case TOKEN_DOT:
+      p.next()
+      if p.is(TOKEN_ID) {
+        return &ast.Atom{Value: p.literal}
+      } else {
+        p.error("expected identifier")
+      }
     }
   }
 
   return nil
 }
 
+func (p *parser) callArgs() ast.Node {
+  args := &ast.CallArgs{}
+  arg := p.primaryExpr()
+
+  for arg != nil {
+    if p.accept(TOKEN_EQ) {
+      switch arg.(type) {
+      case *ast.Id:
+        argvalue := p.expr()
+        args.Keywords = append(args.Keywords, &ast.Keyword{Left: arg, Right: argvalue})
+      case *ast.Atom:
+        argvalue := p.expr()
+        args.AtomKeywords = append(args.AtomKeywords, &ast.AtomKeyword{Left: arg, Right: argvalue})
+      default:
+        p.error("non id or atom at left side of =")
+      }
+    } else {
+      // positional argument
+      if len(args.Keywords) + len(args.AtomKeywords) > 0 {
+        p.error("positional argument after keyword arguments")
+      }
+      args.Pos = append(args.Pos, arg)
+    }
+
+    if !p.accept(TOKEN_COMMA) {
+      break
+    }
+    arg = p.primaryExpr()
+  }
+
+  return args
+}
+
+func (p* parser) callExpr(previous ast.Node) ast.Node {
+  var left ast.Node
+
+  if previous != nil {
+    left = previous
+  } else {
+    left = p.primaryExpr()
+  }
+
+  if !p.is(TOKEN_COMMA) && !p.is(TOKEN_EOS) {
+    args := p.callArgs()
+
+    left = &ast.Call{Left: left, Args: args}
+    return p.callExpr(left)
+  }
+
+  return left
+}
+
 func (p *parser) expr() ast.Node {
-  return p.primaryExpr()
-} 
+  return p.callExpr(nil)
+}
 
 func (p *parser) program() ast.Node {
   p.next()

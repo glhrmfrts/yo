@@ -29,7 +29,7 @@ func isDigit(ch rune) bool {
 }
 
 func (t *tokenizer) error(msg string) {
-  fmt.Printf("%s:%i: syntax error: %s\n", t.filename, t.lineno, msg)
+  fmt.Printf("%s:%d -> syntax error: %s\n", t.filename, t.lineno, msg)
   os.Exit(1)
 }
 
@@ -67,8 +67,8 @@ func (t *tokenizer) nextChar() bool {
 }
 
 func (t *tokenizer) scanComment() bool {
-  // initial '/' already consumed
-  if t.r == '/' {
+  // initial '-' already consumed
+  if t.r == '-' {
     for t.r != '\n' {
       t.nextChar()
     }
@@ -218,23 +218,26 @@ func (t *tokenizer) nextToken() (token, string) {
     // Always advance
     defer t.nextChar()
 
-    if t.r == '/' {
+    if t.r == '-' {
       if t.scanComment() {
         return t.nextToken()
       }
-      return TOKEN_DIV, string(t.r)
+      return TOKEN_MINUS, string(t.r)
     }
-    var tok = -1
+
+    var tok = token(-1)
     switch t.r {
     case '+': tok = TOKEN_PLUS
-    case '-': tok = TOKEN_PLUS
-    case '*': tok = TOKEN_PLUS
+    case '/': tok = TOKEN_DIV
+    case '*': tok = TOKEN_MULT
     case '<': tok = t.maybe2(TOKEN_LT, '=', TOKEN_LTEQ, '<', TOKEN_LTLT)
     case '>': tok = t.maybe2(TOKEN_GT, '=', TOKEN_GTEQ, '>', TOKEN_GTGT)
     case '=': tok = t.maybe1(TOKEN_EQ, '=', TOKEN_EQEQ)
     case ':': tok = TOKEN_COLON
+    case ',': tok = TOKEN_COMMA
+    case '.': tok = TOKEN_DOT
     case '(': tok = TOKEN_LPAREN
-    case '(': tok = TOKEN_RPAREN
+    case ')': tok = TOKEN_RPAREN
     case '[': tok = TOKEN_LBRACK
     case ']': tok = TOKEN_RBRACK
     case '{': tok = TOKEN_LBRACE

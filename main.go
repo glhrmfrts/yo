@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	root := parse.Parse("hello", "test")
+	root := parse.Parse("player.pos.x = 3", "test")
   out := ast.Prettyprint(root)
   fmt.Println(out)
 }
