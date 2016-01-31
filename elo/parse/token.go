@@ -9,6 +9,10 @@ const (
   TOKEN_NIL
   TOKEN_TRUE
   TOKEN_FALSE
+  TOKEN_IF
+  TOKEN_ELSE
+  TOKEN_FOR
+  TOKEN_FUNC
   TOKEN_ID
   TOKEN_STRING
   TOKEN_NUMBER
@@ -35,3 +39,13 @@ const (
   TOKEN_RBRACE
   TOKEN_ILLEGAL
 )
+
+var keywords = map[string]token{
+  "nil": TOKEN_NIL,
+  "true": TOKEN_TRUE,
+  "false": TOKEN_FALSE,
+  "if": TOKEN_IF,
+  "else": TOKEN_ELSE,
+  "for": TOKEN_FOR,
+  "func": TOKEN_FUNC,
+}

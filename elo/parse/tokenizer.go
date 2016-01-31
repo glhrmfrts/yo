@@ -169,6 +169,100 @@ exit:
   return string(t.src[offs:t.offset])
 }
 
+// scans a valid escape sequence and returns the evaluated value
+func (t *tokenizer) scanEscape(quote rune) rune {
+
+  var n int
+  var base, max uint32
+  var r rune
+
+  switch t.r {
+  case 'a': r = '\a'
+  case 'b': r = '\b'
+  case 'f': r = '\f'
+  case 'n': r = '\n'
+  case 'r': r = '\r'
+  case 't': r = '\t'
+  case 'v': r = '\v'
+  case '\\': r = '\\'
+  case quote: r = quote
+  case '0', '1', '2', '3', '4', '5', '6', '7':
+    n, base, max = 3, 8, 255
+  case 'x':
+    t.nextChar()
+    n, base, max = 2, 16, 255
+  case 'u':
+    t.nextChar()
+    n, base, max = 4, 16, unicode.MaxRune
+  case 'U':
+    t.nextChar()
+    n, base, max = 8, 16, unicode.MaxRune
+  default:
+    msg := "unknown escape sequence"
+    if t.r < 0 {
+      msg = "escape sequence not terminated"
+    }
+    t.error(msg)
+  }
+
+  if r > 0 {
+    return r
+  }
+
+  var x uint32
+  for n > 0 {
+    d := uint32(digitVal(t.r))
+    if d >= base {
+      msg := fmt.Sprintf("illegal character %#U in escape sequence", t.r)
+      if t.r < 0 {
+        msg = "escape sequence not terminated"
+      }
+      t.error(msg)
+    }
+    x = x*base + d
+    t.nextChar()
+    n--
+    if n == 0 && base == 16 && max == 255 && t.r == '\\' {
+      rd := t.readOffset
+      t.nextChar()
+      if t.r == 'x' {
+        n = 2
+        max = unicode.MaxRune
+        t.nextChar()
+      } else {
+        t.readOffset = rd
+      }
+    }
+  }
+
+  if x > max || 0xD800 <= x && x < 0xE000 {
+    t.error("escape sequence is invalid Unicode code point")
+  }
+
+  return rune(x)
+}
+
+func (t *tokenizer) scanString(quote rune) string {
+  var result string
+  for {
+    ch := t.r
+    if ch < 0 {
+      t.error("string literal not terminated")
+    }
+    t.nextChar()
+    if ch == quote {
+      break
+    }
+    if ch == '\\' {
+      ch = t.scanEscape(quote)
+    }
+    result += string(ch)
+  }
+
+  t.nextChar()
+  return result
+}
+
 func (t *tokenizer) skipWhitespace() {
   for t.r == ' ' || t.r == '\t' || t.r == '\n' {
     t.nextChar()
@@ -207,13 +301,20 @@ func (t *tokenizer) maybe2(a token, c1 rune, t1 token, c2 rune, t2 token) token 
 func (t *tokenizer) nextToken() (token, string) {
   t.skipWhitespace()
 
-  switch {
+  switch ch := t.r; {
   case t.r != '-' && isLetter(t.r): // '-' is a letter but cannot start an identifier
     lit := t.scanIdentifier()
+    kwtype, ok := keywords[lit]
+    if ok {
+      return kwtype, lit
+    }
     return TOKEN_ID, lit
   case isDigit(t.r):
     lit := t.scanNumber(false)
     return TOKEN_NUMBER, lit
+  case t.r == '\'' || t.r == '"':
+    t.nextChar()
+    return TOKEN_STRING, t.scanString(ch)
   default:
     // Always advance
     defer t.nextChar()
@@ -250,15 +351,15 @@ func (t *tokenizer) nextToken() (token, string) {
   }
 
   if t.offset >= len(t.src) {
-    return TOKEN_EOS, ""
+    return TOKEN_EOS, "end"
   }
 
   return TOKEN_ILLEGAL, ""
 }
 
-func makeTokenizer(source, filename string) *tokenizer {
+func makeTokenizer(source []byte, filename string) *tokenizer {
   tok := &tokenizer{
-    src: []byte(source),
+    src: source,
     filename: filename,
   }
   tok.nextChar()

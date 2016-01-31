@@ -2,12 +2,25 @@ package main
 
 import (
   "fmt"
+  "os"
+  "io/ioutil"
 	"github.com/glhrmfrts/elo-lang/elo/parse"
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
 func main() {
-	root := parse.Parse("player.pos.x = 3", "test")
+  filename := os.Args[1]
+  source, err := ioutil.ReadFile(filename)
+  if err != nil {
+    panic(err)
+  }
+
+	root, err := parse.Parse(source, filename)
+  if err != nil {
+    fmt.Println(err.Error())
+    return
+  }
+
   out := ast.Prettyprint(root)
   fmt.Println(out)
 }

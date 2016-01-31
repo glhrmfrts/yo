@@ -12,8 +12,9 @@ type parser struct {
   tokenizer *tokenizer
 }
 
-func (p *parser) error(msg string) {
-  p.tokenizer.error(msg)
+func (p *parser) error(msg string) error {
+  t := p.tokenizer
+  return fmt.Errorf("%s:%d -> syntax error: %s", t.filename, t.lineno, msg)
 }
 
 func (p *parser) next() {
@@ -32,113 +33,51 @@ func (p *parser) accept(toktype token) bool {
   return false
 }
 
-func (p *parser) maybeFuncDef(arg ast.Node) ast.Node {
-  if p.is(TOKEN_LBRACE) {
-    //return p.funcDef(arg)
-  }
-  return arg
-}
-
-func (p *parser) primaryExpr() ast.Node {
+func (p *parser) primaryExpr() (ast.Node, error) {
+  defer p.next()
   switch p.tok {
   case TOKEN_LPAREN:
     p.next()
-    expr := p.expr()
-    if p.accept(TOKEN_COMMA) {
-      //return p.funcDef(expr)
-    } else if p.accept(TOKEN_RPAREN) {
-      return p.maybeFuncDef(expr)
+    expr, err := p.expr()
+    if err != nil {
+      return nil, err
     }
-    p.error(fmt.Sprintf("unexpected %s", p.literal))
-  default:
-    defer p.next()
-    switch p.tok {
-    case TOKEN_NUMBER:
-      return &ast.Number{Value: p.literal}
-    case TOKEN_ID:
-      return &ast.Id{Value: p.literal}
-    case TOKEN_DOT:
-      p.next()
-      if p.is(TOKEN_ID) {
-        return &ast.Atom{Value: p.literal}
-      } else {
-        p.error("expected identifier")
-      }
+    if !p.is(TOKEN_RPAREN) {
+      return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
     }
+    return expr, nil
+  case TOKEN_NUMBER:
+    return &ast.Number{Value: p.literal}, nil
+  case TOKEN_ID:
+    return &ast.Id{Value: p.literal}, nil
+  case TOKEN_STRING:
+    return &ast.String{Value: p.literal}, nil
+  case TOKEN_TRUE, TOKEN_FALSE:
+    return &ast.Bool{Value: p.tok == TOKEN_TRUE}, nil
+  case TOKEN_NIL:
+    return &ast.Nil{}, nil
   }
 
-  return nil
+  return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
 }
 
-func (p *parser) callArgs() ast.Node {
-  args := &ast.CallArgs{}
-  arg := p.primaryExpr()
-
-  for arg != nil {
-    if p.accept(TOKEN_EQ) {
-      switch arg.(type) {
-      case *ast.Id:
-        argvalue := p.expr()
-        args.Keywords = append(args.Keywords, &ast.Keyword{Left: arg, Right: argvalue})
-      case *ast.Atom:
-        argvalue := p.expr()
-        args.AtomKeywords = append(args.AtomKeywords, &ast.AtomKeyword{Left: arg, Right: argvalue})
-      default:
-        p.error("non id or atom at left side of =")
-      }
-    } else {
-      // positional argument
-      if len(args.Keywords) + len(args.AtomKeywords) > 0 {
-        p.error("positional argument after keyword arguments")
-      }
-      args.Pos = append(args.Pos, arg)
-    }
-
-    if !p.accept(TOKEN_COMMA) {
-      break
-    }
-    arg = p.primaryExpr()
-  }
-
-  return args
+func (p *parser) expr() (ast.Node, error) {
+  return p.primaryExpr()
 }
 
-func (p* parser) callExpr(previous ast.Node) ast.Node {
-  var left ast.Node
-
-  if previous != nil {
-    left = previous
-  } else {
-    left = p.primaryExpr()
-  }
-
-  if !p.is(TOKEN_COMMA) && !p.is(TOKEN_EOS) {
-    args := p.callArgs()
-
-    left = &ast.Call{Left: left, Args: args}
-    return p.callExpr(left)
-  }
-
-  return left
-}
-
-func (p *parser) expr() ast.Node {
-  return p.callExpr(nil)
-}
-
-func (p *parser) program() ast.Node {
+func (p *parser) program() (ast.Node, error) {
   p.next()
   return p.expr()
 }
 
-func makeParser(source, filename string) *parser {
+func makeParser(source []byte, filename string) *parser {
   p := &parser{
     tokenizer: makeTokenizer(source, filename),
   }
   return p
 }
 
-func Parse(source, filename string) ast.Node {
+func Parse(source []byte, filename string) (ast.Node, error) {
   p := makeParser(source, filename)
   return p.program()
 }

@@ -9,6 +9,13 @@ type Node interface {
   Accept(v Visitor)
 }
 
+type Nil struct {  
+}
+
+type Bool struct {
+  Value bool
+}
+
 type Number struct {
   Value string
 }
@@ -17,7 +24,7 @@ type Id struct {
   Value string
 }
 
-type Atom struct {
+type String struct {
   Value string
 }
 
@@ -44,6 +51,14 @@ type Call struct {
 }
 
 
+func (node *Nil) Accept(v Visitor) {
+  v.VisitNil(node)
+}
+
+func (node *Bool) Accept(v Visitor) {
+  v.VisitBool(node)
+}
+
 func (node *Number) Accept(v Visitor) {
   v.VisitNumber(node)
 }
@@ -52,8 +67,8 @@ func (node *Id) Accept(v Visitor) {
   v.VisitId(node)
 }
 
-func (node *Atom) Accept(v Visitor) {
-  v.VisitAtom(node)
+func (node *String) Accept(v Visitor) {
+  v.VisitString(node)
 }
 
 func (node *Keyword) Accept(v Visitor) {

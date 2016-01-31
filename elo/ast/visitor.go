@@ -6,9 +6,11 @@ import (
 )
 
 type Visitor interface {
+  VisitNil(node *Nil)
+  VisitBool(node *Bool)
   VisitNumber(node *Number)
   VisitId(node *Id)
-  VisitAtom(node *Atom)
+  VisitString(node *String)
   VisitKeyword(node *Keyword)
   VisitAtomKeyword(node *AtomKeyword)
   VisitCallArgs(node *CallArgs)

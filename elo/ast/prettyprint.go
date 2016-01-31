@@ -17,6 +17,20 @@ func (p *Prettyprinter) doIndent() {
   }
 }
 
+func (p *Prettyprinter) VisitNil(node *Nil) {
+  p.buf.WriteString("(nil)")
+}
+
+func (p *Prettyprinter) VisitBool(node *Bool) {
+  var val string
+  if node.Value {
+    val = "true"
+  } else {
+    val = "false"
+  }
+  p.buf.WriteString("(" + val + ")")
+}
+
 func (p *Prettyprinter) VisitNumber(node *Number) {
   p.buf.WriteString("(number " + node.Value + ")")
 }
@@ -25,8 +39,8 @@ func (p *Prettyprinter) VisitId(node *Id) {
   p.buf.WriteString("(id " + node.Value + ")")
 }
 
-func (p *Prettyprinter) VisitAtom(node *Atom) {
-  p.buf.WriteString("(atom ."+ node.Value + ")")
+func (p *Prettyprinter) VisitString(node *String) {
+  p.buf.WriteString("(string \""+ node.Value + "\")")
 }
 
 func (p *Prettyprinter) VisitKeyword(node *Keyword) {
