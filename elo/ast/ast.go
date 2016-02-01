@@ -3,6 +3,7 @@
 package ast
 
 import (
+  "github.com/glhrmfrts/elo-lang/elo/token"
 )
 
 type Node interface {
@@ -50,6 +51,17 @@ type Call struct {
   Args Node 
 }
 
+type UnaryExpr struct {
+  Op    token.Token
+  Right Node
+}
+
+type BinaryExpr struct {
+  Op    token.Token
+  Left  Node
+  Right Node
+}
+
 
 func (node *Nil) Accept(v Visitor) {
   v.VisitNil(node)
@@ -85,4 +97,12 @@ func (node *CallArgs) Accept(v Visitor) {
 
 func (node *Call) Accept(v Visitor) {
   v.VisitCall(node)
+}
+
+func (node *UnaryExpr) Accept(v Visitor) {
+  v.VisitUnaryExpr(node)
+}
+
+func (node *BinaryExpr) Accept(v Visitor) {
+  v.VisitBinaryExpr(node)
 }

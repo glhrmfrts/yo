@@ -3,7 +3,9 @@
 package ast
 
 import (
+  "fmt"
   "bytes"
+  //"github.com/glhrmfrts/elo-lang/elo/token"
 )
 
 type Prettyprinter struct {
@@ -93,6 +95,20 @@ func (p *Prettyprinter) VisitCall(node *Call) {
   p.indent--
   p.doIndent()
   p.buf.WriteString(")\n")
+}
+
+func (p *Prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
+  p.buf.WriteString(fmt.Sprintf("(unary %s ", node.Op))
+  node.Right.Accept(p)
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
+  p.buf.WriteString(fmt.Sprintf("(binary %s ", node.Op))
+  node.Left.Accept(p)
+  p.buf.WriteString(" ")
+  node.Right.Accept(p)
+  p.buf.WriteString(")") 
 }
 
 func Prettyprint(root Node) string {

@@ -3,10 +3,11 @@ package parse
 import (
   "fmt"
   "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/elo/token"
 )
 
 type parser struct {
-  tok token
+  tok token.Token
   literal string
 
   tokenizer *tokenizer
@@ -21,11 +22,11 @@ func (p *parser) next() {
   p.tok, p.literal = p.tokenizer.nextToken()
 }
 
-func (p *parser) is(toktype token) bool {
+func (p *parser) is(toktype token.Token) bool {
   return p.tok == toktype
 }
 
-func (p *parser) accept(toktype token) bool {
+func (p *parser) accept(toktype token.Token) bool {
   if p.is(toktype) {
     p.next()
     return true
@@ -36,33 +37,73 @@ func (p *parser) accept(toktype token) bool {
 func (p *parser) primaryExpr() (ast.Node, error) {
   defer p.next()
   switch p.tok {
-  case TOKEN_LPAREN:
+  case token.LPAREN:
     p.next()
     expr, err := p.expr()
     if err != nil {
       return nil, err
     }
-    if !p.is(TOKEN_RPAREN) {
+    if !p.is(token.RPAREN) {
       return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
     }
     return expr, nil
-  case TOKEN_NUMBER:
+  case token.NUMBER:
     return &ast.Number{Value: p.literal}, nil
-  case TOKEN_ID:
+  case token.ID:
     return &ast.Id{Value: p.literal}, nil
-  case TOKEN_STRING:
+  case token.STRING:
     return &ast.String{Value: p.literal}, nil
-  case TOKEN_TRUE, TOKEN_FALSE:
-    return &ast.Bool{Value: p.tok == TOKEN_TRUE}, nil
-  case TOKEN_NIL:
+  case token.TRUE, token.FALSE:
+    return &ast.Bool{Value: p.tok == token.TRUE}, nil
+  case token.NIL:
     return &ast.Nil{}, nil
   }
 
   return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
 }
 
-func (p *parser) expr() (ast.Node, error) {
+func (p *parser) unaryExpr() (ast.Node, error) {
   return p.primaryExpr()
+}
+
+func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) {
+  for token.IsBinaryOp(p.tok) && token.Precedence(p.tok) >= minPrecedence {
+    op := p.tok
+    opPrecedence := token.Precedence(op)
+
+    // consume operator
+    p.next()
+    if p.is(token.EOS) {
+      return nil, p.error("expression not terminated")
+    }
+
+    right, err := p.unaryExpr()
+    if err != nil {
+      return nil, err
+    }
+
+    for token.IsBinaryOp(p.tok) && token.Precedence(p.tok) > opPrecedence || 
+        (token.RightAssociative(p.tok) && token.Precedence(p.tok) >= opPrecedence) {
+
+      right, err = p.binaryExpr(right, token.Precedence(p.tok))
+      if err != nil {
+        return nil, err
+      }
+    }
+
+    left = &ast.BinaryExpr{Op: op, Left: left, Right: right}
+  }
+
+  return left, nil
+}
+
+func (p *parser) expr() (ast.Node, error) {
+  primary, err := p.primaryExpr()
+  if err != nil {
+    return nil, err
+  }
+
+  return p.binaryExpr(primary, 0)
 }
 
 func (p *parser) program() (ast.Node, error) {

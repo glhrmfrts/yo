@@ -7,6 +7,7 @@ import (
   "unicode/utf8"
   "os"
   "fmt"
+  "github.com/glhrmfrts/elo-lang/elo/token"
 )
 
 type tokenizer struct {
@@ -269,24 +270,20 @@ func (t *tokenizer) skipWhitespace() {
   }
 }
 
-func (t *tokenizer) maybe1(a token, c1 rune, t1 token) token {
+func (t *tokenizer) maybe1(a token.Token, c1 rune, t1 token.Token) token.Token {
   offset := t.readOffset
-  defer func(t *tokenizer, offset int) {
-    t.readOffset = offset
-  }(t, offset)
 
   t.nextChar()
   if t.r == c1 {
     return t1
   }
+
+  t.readOffset = offset
   return a
 }
 
-func (t *tokenizer) maybe2(a token, c1 rune, t1 token, c2 rune, t2 token) token {
-  offset := t.offset
-  defer func(t *tokenizer, offset int) {
-    t.offset = offset
-  }(t, offset)
+func (t *tokenizer) maybe2(a token.Token, c1 rune, t1 token.Token, c2 rune, t2 token.Token) token.Token {
+  offset := t.readOffset
 
   t.nextChar()
   if t.r == c1 {
@@ -295,54 +292,57 @@ func (t *tokenizer) maybe2(a token, c1 rune, t1 token, c2 rune, t2 token) token 
   if t.r == c2 {
     return t2
   }
+
+  t.readOffset = offset
   return a
 }
 
-func (t *tokenizer) nextToken() (token, string) {
+func (t *tokenizer) nextToken() (token.Token, string) {
   t.skipWhitespace()
 
   switch ch := t.r; {
   case t.r != '-' && isLetter(t.r): // '-' is a letter but cannot start an identifier
     lit := t.scanIdentifier()
-    kwtype, ok := keywords[lit]
+    kwtype, ok := token.Keyword(lit)
     if ok {
       return kwtype, lit
     }
-    return TOKEN_ID, lit
+    return token.ID, lit
   case isDigit(t.r):
     lit := t.scanNumber(false)
-    return TOKEN_NUMBER, lit
+    return token.NUMBER, lit
   case t.r == '\'' || t.r == '"':
     t.nextChar()
-    return TOKEN_STRING, t.scanString(ch)
+    return token.STRING, t.scanString(ch)
   default:
-    // Always advance
-    defer t.nextChar()
-
     if t.r == '-' {
+      t.nextChar()
       if t.scanComment() {
         return t.nextToken()
       }
-      return TOKEN_MINUS, string(t.r)
+      return token.MINUS, string(t.r)
     }
 
-    var tok = token(-1)
+    // Always advance
+    defer t.nextChar()
+
+    var tok = token.Token(-1)
     switch t.r {
-    case '+': tok = TOKEN_PLUS
-    case '/': tok = TOKEN_DIV
-    case '*': tok = TOKEN_MULT
-    case '<': tok = t.maybe2(TOKEN_LT, '=', TOKEN_LTEQ, '<', TOKEN_LTLT)
-    case '>': tok = t.maybe2(TOKEN_GT, '=', TOKEN_GTEQ, '>', TOKEN_GTGT)
-    case '=': tok = t.maybe1(TOKEN_EQ, '=', TOKEN_EQEQ)
-    case ':': tok = TOKEN_COLON
-    case ',': tok = TOKEN_COMMA
-    case '.': tok = TOKEN_DOT
-    case '(': tok = TOKEN_LPAREN
-    case ')': tok = TOKEN_RPAREN
-    case '[': tok = TOKEN_LBRACK
-    case ']': tok = TOKEN_RBRACK
-    case '{': tok = TOKEN_LBRACE
-    case '}': tok = TOKEN_RBRACE
+    case '+': tok = token.PLUS
+    case '/': tok = token.DIV
+    case '*': tok = token.MULT
+    case '<': tok = t.maybe2(token.LT, '=', token.LTEQ, '<', token.LTLT)
+    case '>': tok = t.maybe2(token.GT, '=', token.GTEQ, '>', token.GTGT)
+    case '=': tok = t.maybe1(token.EQ, '=', token.EQEQ)
+    case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
+    case ',': tok = token.COMMA
+    case '.': tok = token.DOT
+    case '(': tok = token.LPAREN
+    case ')': tok = token.RPAREN
+    case '[': tok = token.LBRACK
+    case ']': tok = token.RBRACK
+    case '{': tok = token.LBRACE
+    case '}': tok = token.RBRACE
     }
 
     if tok != -1 {
@@ -351,10 +351,10 @@ func (t *tokenizer) nextToken() (token, string) {
   }
 
   if t.offset >= len(t.src) {
-    return TOKEN_EOS, "end"
+    return token.EOS, "end"
   }
 
-  return TOKEN_ILLEGAL, ""
+  return token.ILLEGAL, ""
 }
 
 func makeTokenizer(source []byte, filename string) *tokenizer {

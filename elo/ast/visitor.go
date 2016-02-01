@@ -15,4 +15,6 @@ type Visitor interface {
   VisitAtomKeyword(node *AtomKeyword)
   VisitCallArgs(node *CallArgs)
   VisitCall(node *Call)
+  VisitUnaryExpr(node *UnaryExpr)
+  VisitBinaryExpr(node *BinaryExpr)
 }
