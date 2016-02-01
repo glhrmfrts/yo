@@ -11,10 +11,6 @@ type Visitor interface {
   VisitNumber(node *Number)
   VisitId(node *Id)
   VisitString(node *String)
-  VisitKeyword(node *Keyword)
-  VisitAtomKeyword(node *AtomKeyword)
-  VisitCallArgs(node *CallArgs)
-  VisitCall(node *Call)
   VisitUnaryExpr(node *UnaryExpr)
   VisitBinaryExpr(node *BinaryExpr)
 }

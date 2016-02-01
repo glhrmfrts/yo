@@ -29,28 +29,6 @@ type String struct {
   Value string
 }
 
-type Keyword struct {
-  Left  Node
-  Right Node
-}
-
-type AtomKeyword struct {
-  Left  Node
-  Right Node
-}
-
-// TODO: atom positionals?
-type CallArgs struct {
-  Pos           []Node
-  Keywords      []Node
-  AtomKeywords  []Node
-}
-
-type Call struct {
-  Left Node 
-  Args Node 
-}
-
 type UnaryExpr struct {
   Op    token.Token
   Right Node
@@ -81,22 +59,6 @@ func (node *Id) Accept(v Visitor) {
 
 func (node *String) Accept(v Visitor) {
   v.VisitString(node)
-}
-
-func (node *Keyword) Accept(v Visitor) {
-  v.VisitKeyword(node)
-}
-
-func (node *AtomKeyword) Accept(v Visitor) {
-  v.VisitAtomKeyword(node)
-}
-
-func (node *CallArgs) Accept(v Visitor) {
-  v.VisitCallArgs(node)
-}
-
-func (node *Call) Accept(v Visitor) {
-  v.VisitCall(node)
 }
 
 func (node *UnaryExpr) Accept(v Visitor) {
