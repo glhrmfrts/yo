@@ -14,34 +14,56 @@ const (
   ELSE
   FOR
   FUNC
+  NOT
   ID
   STRING
   NUMBER
 
-  // operators in order of precedence from lower-to-higher
-  binaryOpBegin
+  // assignment operators
+  assignOpBegin
   EQ
   COLONEQ
+  PLUSEQ
+  MINUSEQ
+  TIMESEQ
+  DIVEQ
+  PIPEEQ
+  AMPEQ
+  TILDEEQ
+  assignOpEnd
+
+  // operators in order of precedence from lower-to-higher
+  binaryOpBegin
+  PIPEPIPE
+
+  AMPAMP
+
+  EQEQ
+  BANGEQ
 
   LT
   LTEQ
-  LTLT
   GT
   GTEQ
-  GTGT
-
-  EQEQ
 
   PLUS
   MINUS
+  PIPE
+  TILDE
 
-  MULT
+  TIMES
+  TIMESTIMES
   DIV
+  LTLT
+  GTGT
+  AMP
+  MOD
   binaryOpEnd
 
   COLON
   COMMA
   DOT
+  BANG
   LPAREN
   RPAREN
   LBRACK
@@ -60,6 +82,7 @@ var keywords = map[string]Token{
   "else": ELSE,
   "for": FOR,
   "func": FUNC,
+  "not": NOT,
 }
 
 // descriptive representation of tokens
@@ -72,13 +95,20 @@ var strings = map[Token]string{
   ELSE: "else",
   FOR: "for",
   FUNC: "func",
+  NOT: "not",
   ID: "identifier",
   STRING: "string",
   NUMBER: "number",
   PLUS: "+",
   MINUS: "-",
-  MULT: "*",
+  TIMES: "*",
   DIV: "/",
+  AMPAMP: "&&",
+  PIPEPIPE: "||",
+  AMP: "&",
+  PIPE: "|",
+  TILDE: "^",
+  MOD: "%",
   LT: "<",
   LTEQ: "<=",
   LTLT: "<<",
@@ -86,11 +116,13 @@ var strings = map[Token]string{
   GTEQ: ">=",
   GTGT: ">>",
   EQ: "=",
+  BANGEQ: "!=",
   COLONEQ: ":=",
   EQEQ: "==",
   COLON: ":",
   COMMA: ",",
   DOT: ".",
+  BANG: "!",
   LPAREN: "(",
   RPAREN: ")",
   LBRACK: "[",
@@ -102,11 +134,12 @@ var strings = map[Token]string{
 
 // operators precedence
 var precedences = []int{
-	0, 0,
-	10, 10, 10, 10, 10, 10,
+	10,
 	20,
-	30, 30, 
-	40, 40,
+	30, 30,
+	40, 40, 40, 40,
+	50, 50, 50, 50,
+	60, 60, 60, 60, 60, 60, 60,
 }
 
 func Keyword(lit string) (Token, bool) {
@@ -114,8 +147,16 @@ func Keyword(lit string) (Token, bool) {
 	return t, ok
 }
 
+func IsUnaryOp(tok Token) bool {
+	return (tok == NOT || tok == BANG || tok == MINUS || tok == PLUS)
+}
+
 func IsBinaryOp(tok Token) bool {
 	return tok >= binaryOpBegin && tok <= binaryOpEnd
+}
+
+func IsAssignOp(tok Token) bool {
+	return tok >= assignOpBegin && tok <= assignOpEnd
 }
 
 func Precedence(tok Token) int {

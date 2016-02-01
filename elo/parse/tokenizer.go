@@ -320,6 +320,9 @@ func (t *tokenizer) nextToken() (token.Token, string) {
       if t.scanComment() {
         return t.nextToken()
       }
+      if t.r == '=' {
+        return token.MINUSEQ, "-="
+      }
       return token.MINUS, string(t.r)
     }
 
@@ -328,15 +331,19 @@ func (t *tokenizer) nextToken() (token.Token, string) {
 
     var tok = token.Token(-1)
     switch t.r {
-    case '+': tok = token.PLUS
-    case '/': tok = token.DIV
-    case '*': tok = token.MULT
+    case '+': tok = t.maybe1(token.PLUS, '=', token.PLUSEQ)
+    case '/': tok = t.maybe1(token.DIV, '=', token.DIVEQ)
+    case '*': tok = t.maybe2(token.TIMES, '=', token.TIMESEQ, '*', token.TIMESTIMES)
+    case '&': tok = t.maybe2(token.AMP, '=', token.AMPEQ, '&', token.AMPAMP)
+    case '|': tok = t.maybe2(token.PIPE, '=', token.PIPEEQ, '|', token.PIPEPIPE)
+    case '^': tok = t.maybe1(token.TILDE, '=', token.TILDEEQ)
     case '<': tok = t.maybe2(token.LT, '=', token.LTEQ, '<', token.LTLT)
     case '>': tok = t.maybe2(token.GT, '=', token.GTEQ, '>', token.GTGT)
     case '=': tok = t.maybe1(token.EQ, '=', token.EQEQ)
     case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
     case ',': tok = token.COMMA
     case '.': tok = token.DOT
+    case '!': tok = t.maybe1(token.BANG, '=', token.BANGEQ)
     case '(': tok = token.LPAREN
     case ')': tok = token.RPAREN
     case '[': tok = token.LBRACK

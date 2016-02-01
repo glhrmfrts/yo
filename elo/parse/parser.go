@@ -63,6 +63,25 @@ func (p *parser) primaryExpr() (ast.Node, error) {
 }
 
 func (p *parser) unaryExpr() (ast.Node, error) {
+  if token.IsUnaryOp(p.tok) {
+    op := p.tok
+    p.next()
+
+    var right ast.Node
+    var err error
+    if op == token.NOT {
+      right, err = p.expr()
+    } else {
+      right, err = p.primaryExpr()
+    }
+
+    if err != nil {
+      return nil, err
+    }
+
+    return &ast.UnaryExpr{Op: op, Right: right}, nil
+  }
+
   return p.primaryExpr()
 }
 
@@ -98,12 +117,12 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) 
 }
 
 func (p *parser) expr() (ast.Node, error) {
-  primary, err := p.primaryExpr()
+  left, err := p.unaryExpr()
   if err != nil {
     return nil, err
   }
 
-  return p.binaryExpr(primary, 0)
+  return p.binaryExpr(left, 0)
 }
 
 func (p *parser) program() (ast.Node, error) {
