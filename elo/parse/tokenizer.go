@@ -68,8 +68,8 @@ func (t *tokenizer) nextChar() bool {
 }
 
 func (t *tokenizer) scanComment() bool {
-  // initial '-' already consumed
-  if t.r == '-' {
+  // initial '/' already consumed
+  if t.r == '/' {
     for t.r != '\n' {
       t.nextChar()
     }
@@ -315,24 +315,26 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     t.nextChar()
     return token.STRING, t.scanString(ch)
   default:
-    if t.r == '-' {
+    if t.r == '/' {
       t.nextChar()
       if t.scanComment() {
         return t.nextToken()
       }
+
+      defer t.nextChar()
+
       if t.r == '=' {
-        return token.MINUSEQ, "-="
+        return token.DIVEQ, "/="
       }
-      return token.MINUS, string(t.r)
+      return token.DIV, "/"
     }
 
-    // Always advance
-    defer t.nextChar()
+    tok := token.Token(-1)
+    offs := t.offset
 
-    var tok = token.Token(-1)
     switch t.r {
     case '+': tok = t.maybe1(token.PLUS, '=', token.PLUSEQ)
-    case '/': tok = t.maybe1(token.DIV, '=', token.DIVEQ)
+    case '-': tok = t.maybe1(token.MINUS, '=', token.MINUSEQ)
     case '*': tok = t.maybe2(token.TIMES, '=', token.TIMESEQ, '*', token.TIMESTIMES)
     case '&': tok = t.maybe2(token.AMP, '=', token.AMPEQ, '&', token.AMPAMP)
     case '|': tok = t.maybe2(token.PIPE, '=', token.PIPEEQ, '|', token.PIPEPIPE)
@@ -353,7 +355,8 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     }
 
     if tok != -1 {
-      return tok, string(t.r)
+      t.nextChar()
+      return tok, string(t.src[offs:t.offset])
     }
   }
 

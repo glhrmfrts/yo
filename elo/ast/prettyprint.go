@@ -59,6 +59,32 @@ func (p *Prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
   p.buf.WriteString(")") 
 }
 
+func (p *Prettyprinter) VisitDeclaration(node *Declaration) {
+  keyword := "var"
+  if node.IsConst {
+    keyword = "const"
+  }
+
+  p.buf.WriteString(fmt.Sprintf("(decl %s\n", keyword))
+  p.indent++
+
+  for i, id := range node.Left {
+    p.doIndent()
+    p.buf.WriteString("(" + id.Value)
+
+    if i < len(node.Right) {
+      p.buf.WriteString(" = ")
+      node.Right[i].Accept(p)
+    }
+
+    p.buf.WriteString(")\n")
+  }
+
+  p.indent--
+  p.doIndent()
+  p.buf.WriteString(")\n") 
+}
+
 func Prettyprint(root Node) string {
   v := Prettyprinter{}
   root.Accept(&v)

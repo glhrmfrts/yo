@@ -14,6 +14,8 @@ const (
   ELSE
   FOR
   FUNC
+  CONST
+  VAR
   NOT
   ID
   STRING
@@ -82,6 +84,8 @@ var keywords = map[string]Token{
   "else": ELSE,
   "for": FOR,
   "func": FUNC,
+  "const": CONST,
+  "var": VAR,
   "not": NOT,
 }
 

@@ -13,4 +13,5 @@ type Visitor interface {
   VisitString(node *String)
   VisitUnaryExpr(node *UnaryExpr)
   VisitBinaryExpr(node *BinaryExpr)
+  VisitDeclaration(node *Declaration)
 }

@@ -40,6 +40,12 @@ type BinaryExpr struct {
   Right Node
 }
 
+type Declaration struct {
+  IsConst bool
+  Left    []*Id
+  Right   []Node
+}
+
 
 func (node *Nil) Accept(v Visitor) {
   v.VisitNil(node)
@@ -67,4 +73,8 @@ func (node *UnaryExpr) Accept(v Visitor) {
 
 func (node *BinaryExpr) Accept(v Visitor) {
   v.VisitBinaryExpr(node)
+}
+
+func (node *Declaration) Accept(v Visitor) {
+  v.VisitDeclaration(node)
 }

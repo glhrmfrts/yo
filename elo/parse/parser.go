@@ -13,9 +13,13 @@ type parser struct {
   tokenizer *tokenizer
 }
 
+//
+// utility functions used everywhere
+//
+
 func (p *parser) error(msg string) error {
   t := p.tokenizer
-  return fmt.Errorf("%s:%d -> syntax error: %s", t.filename, t.lineno, msg)
+  return fmt.Errorf("%s:%d: syntax error: %s", t.filename, t.lineno, msg)
 }
 
 func (p *parser) next() {
@@ -34,20 +38,61 @@ func (p *parser) accept(toktype token.Token) bool {
   return false
 }
 
+func (p *parser) idList() []*ast.Id {
+  var list []*ast.Id
+
+  for p.is(token.ID) {
+    list = append(list, &ast.Id{Value: p.literal})
+
+    p.next()
+    if !p.accept(token.COMMA) {
+      break
+    }
+  }
+
+  return list
+}
+
+func (p *parser) exprList() ([]ast.Node, error) {
+  var list []ast.Node
+
+  for {
+    expr, err := p.expr()
+    if err != nil {
+      return nil, err
+    }
+
+    list = append(list, expr)
+    if !p.accept(token.COMMA) {
+      break
+    }
+  }
+
+  return list, nil
+}
+
+//
+// grammar rules
+//
+
 func (p *parser) primaryExpr() (ast.Node, error) {
   defer p.next()
   switch p.tok {
   case token.LPAREN:
     p.next()
     expr, err := p.expr()
+
     if err != nil {
       return nil, err
     }
+
     if !p.is(token.RPAREN) {
       return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
     }
+
     return expr, nil
   case token.NUMBER:
+    // TODO: separate between int and float KINDA URGENT
     return &ast.Number{Value: p.literal}, nil
   case token.ID:
     return &ast.Id{Value: p.literal}, nil
@@ -85,6 +130,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
   return p.primaryExpr()
 }
 
+// parse a binary expression using the legendary wikipedia's algorithm :)
 func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) {
   for token.IsBinaryOp(p.tok) && token.Precedence(p.tok) >= minPrecedence {
     op := p.tok
@@ -125,10 +171,43 @@ func (p *parser) expr() (ast.Node, error) {
   return p.binaryExpr(left, 0)
 }
 
+func (p *parser) declaration() (ast.Node, error) {
+  isConst := p.tok == token.CONST
+  p.next()
+
+  left := p.idList()
+
+  // '='
+  if (!p.accept(token.EQ)) {
+    // a declaration without any values
+    return &ast.Declaration{IsConst: isConst, Left: left}, nil
+  }
+
+  right, err := p.exprList()
+  if err != nil {
+    return nil, err
+  }
+
+  return &ast.Declaration{IsConst: isConst, Left: left, Right: right}, nil
+}
+
+func (p *parser) stmt() (ast.Node, error) {
+  switch p.tok {
+  case token.CONST, token.VAR:
+    return p.declaration()
+  default:
+    return p.expr()
+  }
+}
+
 func (p *parser) program() (ast.Node, error) {
   p.next()
-  return p.expr()
+  return p.stmt()
 }
+
+//
+// initialization of parser
+//
 
 func makeParser(source []byte, filename string) *parser {
   p := &parser{
