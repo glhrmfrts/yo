@@ -6,7 +6,7 @@ package token
 type Token int
 
 const (
-  EOS = iota
+  EOS Token = iota
   NIL
   TRUE
   FALSE
@@ -19,7 +19,8 @@ const (
   NOT
   ID
   STRING
-  NUMBER
+  INT
+  FLOAT
 
   // assignment operators
   assignOpBegin
@@ -102,7 +103,8 @@ var strings = map[Token]string{
   NOT: "not",
   ID: "identifier",
   STRING: "string",
-  NUMBER: "number",
+  INT: "int",
+  FLOAT: "float",
   PLUS: "+",
   MINUS: "-",
   TIMES: "*",

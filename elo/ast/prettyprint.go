@@ -35,7 +35,7 @@ func (p *Prettyprinter) VisitBool(node *Bool) {
 }
 
 func (p *Prettyprinter) VisitNumber(node *Number) {
-  p.buf.WriteString("(number " + node.Value + ")")
+  p.buf.WriteString(fmt.Sprintf("(%s %s)", node.Type, node.Value))
 }
 
 func (p *Prettyprinter) VisitId(node *Id) {
@@ -130,7 +130,7 @@ func (p *Prettyprinter) VisitDeclaration(node *Declaration) {
     keyword = "const"
   }
 
-  p.buf.WriteString(fmt.Sprintf("(decl %s", keyword))
+  p.buf.WriteString(fmt.Sprintf("(%s", keyword))
   p.indent++
 
   for _, id := range node.Left {
@@ -171,6 +171,14 @@ func (p *Prettyprinter) VisitAssignment(node *Assignment) {
 
   p.indent--
   p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitBlock(node *Block) {
+  for _, n := range node.Nodes {
+    p.doIndent()
+    n.Accept(p)
+    p.buf.WriteString("\n")
+  }
 }
 
 func Prettyprint(root Node, indentSize int) string {

@@ -18,4 +18,5 @@ type Visitor interface {
   VisitBinaryExpr(node *BinaryExpr)
   VisitDeclaration(node *Declaration)
   VisitAssignment(node *Assignment)
+  VisitBlock(node *Block)
 }

@@ -106,11 +106,13 @@ func (t *tokenizer) scanMantissa(base int) {
   }
 }
 
-func (t *tokenizer) scanNumber(seenDecimalPoint bool) string {
+func (t *tokenizer) scanNumber(seenDecimalPoint bool) (token.Token, string) {
   // digitVal(t.r) < 10
   offs := t.offset
+  typ := token.INT
 
   if seenDecimalPoint {
+    typ = token.FLOAT
     offs--
     t.scanMantissa(10)
     goto exponent
@@ -153,12 +155,14 @@ func (t *tokenizer) scanNumber(seenDecimalPoint bool) string {
 
 fraction:
   if t.r == '.' {
+    typ = token.FLOAT
     t.nextChar()
     t.scanMantissa(10)
   }
 
 exponent:
   if t.r == 'e' || t.r == 'E' {
+    typ = token.FLOAT
     t.nextChar()
     if t.r == '-' || t.r == '+' {
       t.nextChar()
@@ -167,7 +171,7 @@ exponent:
   }
 
 exit:
-  return string(t.src[offs:t.offset])
+  return typ, string(t.src[offs:t.offset])
 }
 
 // scans a valid escape sequence and returns the evaluated value
@@ -265,7 +269,7 @@ func (t *tokenizer) scanString(quote rune) string {
 }
 
 func (t *tokenizer) skipWhitespace() {
-  for t.r == ' ' || t.r == '\t' || t.r == '\n' {
+  for t.r == ' ' || t.r == '\t' || t.r == '\r' || t.r == '\n' {
     t.nextChar()
   }
 }
@@ -314,8 +318,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     }
     return token.ID, lit
   case isDigit(t.r):
-    lit := t.scanNumber(false)
-    return token.NUMBER, lit
+    return t.scanNumber(false)
   case t.r == '\'' || t.r == '"':
     t.nextChar()
     return token.STRING, t.scanString(ch)
@@ -349,7 +352,6 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     case '=': tok = t.maybe1(token.EQ, '=', token.EQEQ)
     case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
     case ',': tok = token.COMMA
-    case '.': tok = token.DOT
     case '!': tok = t.maybe1(token.BANG, '=', token.BANGEQ)
     case '(': tok = token.LPAREN
     case ')': tok = token.RPAREN
@@ -357,6 +359,13 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     case ']': tok = token.RBRACK
     case '{': tok = token.LBRACE
     case '}': tok = token.RBRACE
+    case '.':
+      t.nextChar()
+      if isDigit(t.r) {
+        return t.scanNumber(true)
+      } else {
+        return token.DOT, "."
+      }
     }
 
     if tok != -1 {
@@ -369,6 +378,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     return token.EOS, "end"
   }
 
+  fmt.Print(string(t.r))
   return token.ILLEGAL, ""
 }
 

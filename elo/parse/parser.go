@@ -102,9 +102,8 @@ func (p *parser) primaryExpr() (ast.Node, error) {
     }
 
     return expr, nil
-  case token.NUMBER:
-    // TODO: separate between int and float KINDA URGENT
-    return &ast.Number{Value: p.literal}, nil
+  case token.INT, token.FLOAT:
+    return &ast.Number{Type: p.tok, Value: p.literal}, nil
   case token.ID:
     return &ast.Id{Value: p.literal}, nil
   case token.STRING:
@@ -218,7 +217,7 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) 
       return nil, err
     }
 
-    for token.IsBinaryOp(p.tok) && token.Precedence(p.tok) > opPrecedence || 
+    for (token.IsBinaryOp(p.tok) && token.Precedence(p.tok) > opPrecedence) || 
         (token.RightAssociative(p.tok) && token.Precedence(p.tok) >= opPrecedence) {
 
       right, err = p.binaryExpr(right, token.Precedence(p.tok))
@@ -308,7 +307,18 @@ func (p *parser) stmt() (ast.Node, error) {
 
 func (p *parser) program() (ast.Node, error) {
   p.next()
-  return p.stmt()
+
+  var nodes []ast.Node
+  for !p.is(token.EOS) {
+    stmt, err := p.stmt()
+    if err != nil {
+      return nil, err
+    }
+
+    nodes = append(nodes, stmt)
+  }
+
+  return &ast.Block{Nodes: nodes}, nil
 }
 
 //

@@ -18,6 +18,7 @@ type Bool struct {
 }
 
 type Number struct {
+  Type  token.Token // int or float
   Value string
 }
 
@@ -67,6 +68,10 @@ type Assignment struct {
   Right []Node
 }
 
+type Block struct {
+  Nodes []Node
+}
+
 
 func (node *Nil) Accept(v Visitor) {
   v.VisitNil(node)
@@ -114,4 +119,8 @@ func (node *Declaration) Accept(v Visitor) {
 
 func (node *Assignment) Accept(v Visitor) {
   v.VisitAssignment(node)
+}
+
+func (node *Block) Accept(v Visitor) {
+  v.VisitBlock(node)
 }
