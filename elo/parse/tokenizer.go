@@ -269,7 +269,7 @@ func (t *tokenizer) scanString(quote rune) string {
 }
 
 func (t *tokenizer) skipWhitespace() {
-  for t.r == ' ' || t.r == '\t' || t.r == '\r' || t.r == '\n' {
+  for t.r == ' ' || t.r == '\t' || t.r == '\r' {
     t.nextChar()
   }
 }
@@ -341,6 +341,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     offs := t.offset
 
     switch t.r {
+    case '\n': tok = token.NEWLINE
     case '+': tok = t.maybe1(token.PLUS, '=', token.PLUSEQ)
     case '-': tok = t.maybe1(token.MINUS, '=', token.MINUSEQ)
     case '*': tok = t.maybe2(token.TIMES, '=', token.TIMESEQ, '*', token.TIMESTIMES)

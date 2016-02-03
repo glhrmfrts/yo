@@ -7,6 +7,7 @@ type Token int
 
 const (
   EOS Token = iota
+  NEWLINE
   NIL
   TRUE
   FALSE

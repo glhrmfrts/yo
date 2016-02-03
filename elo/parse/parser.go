@@ -7,10 +7,10 @@ import (
 )
 
 type parser struct {
-  tok token.Token
-  literal string
-
-  tokenizer *tokenizer
+  tok             token.Token
+  literal         string
+  ignoreNewlines  bool
+  tokenizer       *tokenizer
 }
 
 type ParseError struct {
@@ -34,6 +34,10 @@ func (p *parser) error(msg string) error {
 
 func (p *parser) next() {
   p.tok, p.literal = p.tokenizer.nextToken()
+
+  for p.ignoreNewlines && p.tok == token.NEWLINE {
+    p.tok, p.literal = p.tokenizer.nextToken()
+  }
 }
 
 func (p *parser) is(toktype token.Token) bool {
@@ -172,7 +176,13 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) (ast.Node, error) {
 
   for {
     if dot, lBrack := p.is(token.DOT), p.is(token.LBRACK); dot || lBrack {
+      old := p.ignoreNewlines
+      p.ignoreNewlines = false
       p.next()
+      if p.is(token.NEWLINE) || p.is(token.EOS) {
+        return nil, p.error("expression not terminated")
+      }
+      p.ignoreNewlines = old
 
       if dot {
         left, err = p.selectorExpr(left)
@@ -282,10 +292,13 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) 
     opPrecedence := token.Precedence(op)
 
     // consume operator
+    old := p.ignoreNewlines
+    p.ignoreNewlines = false
     p.next()
-    if p.is(token.EOS) {
+    if p.is(token.NEWLINE) || p.is(token.EOS) {
       return nil, p.error("expression not terminated")
     }
+    p.ignoreNewlines = old
 
     right, err := p.unaryExpr()
     if err != nil {
@@ -402,6 +415,7 @@ func (p *parser) program() (ast.Node, error) {
 
 func makeParser(source []byte, filename string) *parser {
   p := &parser{
+    ignoreNewlines: true,
     tokenizer: makeTokenizer(source, filename),
   }
   return p
