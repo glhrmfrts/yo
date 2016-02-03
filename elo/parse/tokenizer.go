@@ -363,6 +363,12 @@ func (t *tokenizer) nextToken() (token.Token, string) {
       t.nextChar()
       if isDigit(t.r) {
         return t.scanNumber(true)
+      } else if t.r == '.' {
+        t.nextChar()
+        if t.r == '.' {
+          t.nextChar()
+          return token.DOTDOTDOT, "..."
+        }
       } else {
         return token.DOT, "."
       }

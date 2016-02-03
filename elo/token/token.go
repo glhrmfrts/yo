@@ -66,6 +66,7 @@ const (
   COLON
   COMMA
   DOT
+  DOTDOTDOT
   BANG
   LPAREN
   RPAREN
@@ -135,6 +136,7 @@ var strings = map[Token]string{
   COLON: ":",
   COMMA: ",",
   DOT: ".",
+  DOTDOTDOT: "...",
   BANG: "!",
   LPAREN: "(",
   RPAREN: ")",

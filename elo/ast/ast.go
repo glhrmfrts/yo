@@ -45,6 +45,20 @@ type Slice struct {
   End   Node
 }
 
+type KwArg struct {
+  Key   string
+  Value Node
+}
+
+type VarArg struct {
+  Arg Node
+}
+
+type CallExpr struct {
+  Left  Node
+  Args  []Node
+}
+
 type UnaryExpr struct {
   Op    token.Token
   Right Node
@@ -103,6 +117,18 @@ func (node *Subscript) Accept(v Visitor) {
 
 func (node *Slice) Accept(v Visitor) {
   v.VisitSlice(node)
+}
+
+func (node *KwArg) Accept(v Visitor) {
+  v.VisitKwArg(node)
+}
+
+func (node *VarArg) Accept(v Visitor) {
+  v.VisitVarArg(node)
+}
+
+func (node *CallExpr) Accept(v Visitor) {
+  v.VisitCallExpr(node)
 }
 
 func (node *UnaryExpr) Accept(v Visitor) {

@@ -14,7 +14,7 @@ type parser struct {
 }
 
 //
-// utility functions used everywhere
+// common productions
 //
 
 func (p *parser) error(msg string) error {
@@ -117,7 +117,7 @@ func (p *parser) primaryExpr() (ast.Node, error) {
   return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
 }
 
-func (p *parser) selector(left ast.Node) (ast.Node, error) {
+func (p *parser) selectorExpr(left ast.Node) (ast.Node, error) {
   if !p.is(token.ID) {
     return nil, p.error(fmt.Sprintf("unexpected %s, expecting identifier", p.tok))
   }
@@ -126,7 +126,7 @@ func (p *parser) selector(left ast.Node) (ast.Node, error) {
   return &ast.Selector{Left: left, Key: p.literal}, nil
 }
 
-func (p *parser) subscript(left ast.Node) (ast.Node, error) {
+func (p *parser) subscriptExpr(left ast.Node) (ast.Node, error) {
   expr, err := p.expr()
   if err != nil {
     return nil, err
@@ -150,10 +150,14 @@ func (p *parser) subscript(left ast.Node) (ast.Node, error) {
   return sub, nil
 }
 
-func (p *parser) selectorOrSubscript() (ast.Node, error) {
-  left, err := p.primaryExpr()
-  if err != nil {
-    return nil, err
+func (p *parser) selectorOrSubscriptExpr(left ast.Node) (ast.Node, error) {
+  var err error
+
+  if left == nil {
+    left, err = p.primaryExpr()
+    if err != nil {
+      return nil, err
+    }
   }
 
   for {
@@ -161,9 +165,9 @@ func (p *parser) selectorOrSubscript() (ast.Node, error) {
       p.next()
 
       if dot {
-        left, err = p.selector(left)
+        left, err = p.selectorExpr(left)
       } else {
-        left, err = p.subscript(left)
+        left, err = p.subscriptExpr(left)
       }
 
       if err != nil {
@@ -177,6 +181,67 @@ func (p *parser) selectorOrSubscript() (ast.Node, error) {
   return left, nil
 }
 
+func (p *parser) callArgs() ([]ast.Node, error) {
+  var list []ast.Node
+
+  if p.is(token.RPAREN) {
+    // no arguments
+    return list, nil
+  }
+
+  for {
+    arg, err := p.expr()
+    if err != nil {
+      return nil, err
+    }
+
+    // '='
+    if p.accept(token.EQ) {
+      value, err := p.expr()
+      if err != nil {
+        return nil, err
+      }
+
+      if id, isId := arg.(*ast.Id); isId {
+        arg = &ast.KwArg{Key: id.Value, Value: value}
+      } else {
+        return nil, p.error("non-identifier in left side of keyword argument")
+      }
+    } else if p.accept(token.DOTDOTDOT) {
+      arg = &ast.VarArg{Arg: arg}
+    }
+
+    list = append(list, arg)
+    if !p.accept(token.COMMA) {
+      break
+    }
+  }
+
+  return list, nil
+}
+
+func (p *parser) callExpr() (ast.Node, error) {
+  left, err := p.selectorOrSubscriptExpr(nil)
+  if err != nil {
+    return nil, err
+  }
+
+  var args []ast.Node
+  for p.accept(token.LPAREN) {
+    args, err = p.callArgs()
+    if err != nil {
+      return nil, err
+    }
+
+    if !p.accept(token.RPAREN) {
+      return nil, p.error(fmt.Sprintf("unexpected %s, expected closing ')'", p.tok))
+    }
+    left = &ast.CallExpr{Left: left, Args: args}
+  }
+
+  return p.selectorOrSubscriptExpr(left)
+}
+
 func (p *parser) unaryExpr() (ast.Node, error) {
   if token.IsUnaryOp(p.tok) {
     op := p.tok
@@ -187,7 +252,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     if op == token.NOT {
       right, err = p.expr()
     } else {
-      right, err = p.selectorOrSubscript()
+      right, err = p.callExpr()
     }
 
     if err != nil {
@@ -197,7 +262,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     return &ast.UnaryExpr{Op: op, Right: right}, nil
   }
 
-  return p.selectorOrSubscript()
+  return p.callExpr()
 }
 
 // parse a binary expression using the legendary wikipedia's algorithm :)

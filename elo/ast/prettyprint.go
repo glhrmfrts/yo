@@ -95,6 +95,45 @@ func (p *Prettyprinter) VisitSlice(node *Slice) {
   p.buf.WriteString(")")
 }
 
+func (p *Prettyprinter) VisitKwArg(node *KwArg) {
+  p.buf.WriteString("(kwarg\n")
+
+  p.indent++
+  p.doIndent()
+
+  p.buf.WriteString("'" + node.Key + "'\n")
+
+  p.doIndent()
+  node.Value.Accept(p)
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitVarArg(node *VarArg) {
+  p.buf.WriteString("(vararg ")
+  node.Arg.Accept(p)
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
+  p.buf.WriteString("(call\n")
+
+  p.indent++
+  p.doIndent()
+
+  node.Left.Accept(p)
+
+  for _, arg := range node.Args {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    arg.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *Prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
   p.buf.WriteString(fmt.Sprintf("(unary %s\n", node.Op))
   
