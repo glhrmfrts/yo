@@ -13,13 +13,23 @@ type parser struct {
   tokenizer *tokenizer
 }
 
+type ParseError struct {
+  line      int
+  file      string
+  message   string
+}
+
+func (err *ParseError) Error() string {
+  return fmt.Sprintf("%s:%d: syntax error: %s", err.file, err.line, err.message)
+}
+
 //
 // common productions
 //
 
 func (p *parser) error(msg string) error {
   t := p.tokenizer
-  return fmt.Errorf("%s:%d: syntax error: %s", t.filename, t.lineno, msg)
+  return &ParseError{line: t.lineno, file: t.filename, message: msg}
 }
 
 func (p *parser) next() {
