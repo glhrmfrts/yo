@@ -21,6 +21,6 @@ func main() {
     return
   }
 
-  out := ast.Prettyprint(root)
+  out := ast.Prettyprint(root, 2)
   fmt.Println(out)
 }

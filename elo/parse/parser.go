@@ -53,6 +53,17 @@ func (p *parser) idList() []*ast.Id {
   return list
 }
 
+// check if an expression list contains only identifiers
+func (p *parser) checkIdList(list []ast.Node) bool {
+  for _, node := range list {
+    if _, isId := node.(*ast.Id); !isId {
+      return false
+    }
+  }
+
+  return true
+}
+
 func (p *parser) exprList() ([]ast.Node, error) {
   var list []ast.Node
 
@@ -87,7 +98,7 @@ func (p *parser) primaryExpr() (ast.Node, error) {
     }
 
     if !p.is(token.RPAREN) {
-      return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
+      return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
     }
 
     return expr, nil
@@ -104,7 +115,67 @@ func (p *parser) primaryExpr() (ast.Node, error) {
     return &ast.Nil{}, nil
   }
 
-  return nil, p.error(fmt.Sprintf("unexpected %s", p.literal))
+  return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
+}
+
+func (p *parser) selector(left ast.Node) (ast.Node, error) {
+  if !p.is(token.ID) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting identifier", p.tok))
+  }
+
+  defer p.next()
+  return &ast.Selector{Left: left, Key: p.literal}, nil
+}
+
+func (p *parser) subscript(left ast.Node) (ast.Node, error) {
+  expr, err := p.expr()
+  if err != nil {
+    return nil, err
+  }
+
+  sub := &ast.Subscript{Left: left, Right: expr}
+
+  if p.accept(token.COLON) {
+    expr2, err := p.expr()
+    if err != nil {
+      return nil, err
+    }
+
+    sub.Right = &ast.Slice{Start: expr, End: expr2}
+  }
+
+  if !p.accept(token.RBRACK) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ']'", p.tok))
+  }
+
+  return sub, nil
+}
+
+func (p *parser) selectorOrSubscript() (ast.Node, error) {
+  left, err := p.primaryExpr()
+  if err != nil {
+    return nil, err
+  }
+
+  for {
+    if dot, lBrack := p.is(token.DOT), p.is(token.LBRACK); dot || lBrack {
+      p.next()
+
+      if dot {
+        left, err = p.selector(left)
+      } else {
+        left, err = p.subscript(left)
+      }
+
+      if err != nil {
+        return nil, err
+      }
+    } else {
+      break
+    }
+  }
+
+  return left, nil
 }
 
 func (p *parser) unaryExpr() (ast.Node, error) {
@@ -117,7 +188,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     if op == token.NOT {
       right, err = p.expr()
     } else {
-      right, err = p.primaryExpr()
+      right, err = p.selectorOrSubscript()
     }
 
     if err != nil {
@@ -127,7 +198,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     return &ast.UnaryExpr{Op: op, Right: right}, nil
   }
 
-  return p.primaryExpr()
+  return p.selectorOrSubscript()
 }
 
 // parse a binary expression using the legendary wikipedia's algorithm :)
@@ -191,12 +262,47 @@ func (p *parser) declaration() (ast.Node, error) {
   return &ast.Declaration{IsConst: isConst, Left: left, Right: right}, nil
 }
 
+func (p *parser) assignment() (ast.Node, error) {
+  left, err := p.exprList()
+  if err != nil {
+    return nil, err
+  }
+
+  if !token.IsAssignOp(p.tok) {
+    if len(left) > 1 {
+      return nil, p.error("illegal expression")
+    }
+
+    return left[0], nil
+  }
+
+  // ':='
+  if p.is(token.COLONEQ) {
+    // a short variable declaration
+    isIdList := p.checkIdList(left)
+
+    if !isIdList {
+      return nil, p.error("non-identifier at left side of ':='")
+    }
+  }
+
+  op := p.tok
+  p.next()
+
+  right, err := p.exprList()
+  if err != nil {
+    return nil, err
+  }
+
+  return &ast.Assignment{Op: op, Left: left, Right: right}, nil
+}
+
 func (p *parser) stmt() (ast.Node, error) {
   switch p.tok {
   case token.CONST, token.VAR:
     return p.declaration()
   default:
-    return p.expr()
+    return p.assignment()
   }
 }
 

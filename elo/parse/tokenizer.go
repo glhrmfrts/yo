@@ -22,7 +22,7 @@ type tokenizer struct {
 const bom = 0xFEFF // byte-order mark, only allowed as the first character
 
 func isLetter(ch rune) bool {
-  return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch == '-' || ch >= 0x80 && unicode.IsLetter(ch)
+  return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
 func isDigit(ch rune) bool {
@@ -270,6 +270,9 @@ func (t *tokenizer) skipWhitespace() {
   }
 }
 
+// functions that look 1 or 2 characters ahead,
+// and return the given token types based on that
+
 func (t *tokenizer) maybe1(a token.Token, c1 rune, t1 token.Token) token.Token {
   offset := t.readOffset
 
@@ -297,11 +300,13 @@ func (t *tokenizer) maybe2(a token.Token, c1 rune, t1 token.Token, c2 rune, t2 t
   return a
 }
 
+// does the actual scanning and return the type of the token
+// and a literal string representing it
 func (t *tokenizer) nextToken() (token.Token, string) {
   t.skipWhitespace()
 
   switch ch := t.r; {
-  case t.r != '-' && isLetter(t.r): // '-' is a letter but cannot start an identifier
+  case isLetter(t.r):
     lit := t.scanIdentifier()
     kwtype, ok := token.Keyword(lit)
     if ok {

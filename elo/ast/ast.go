@@ -29,6 +29,21 @@ type String struct {
   Value string
 }
 
+type Selector struct {
+  Left  Node
+  Key   string
+}
+
+type Subscript struct {
+  Left  Node
+  Right Node
+}
+
+type Slice struct {
+  Start Node
+  End   Node
+}
+
 type UnaryExpr struct {
   Op    token.Token
   Right Node
@@ -44,6 +59,12 @@ type Declaration struct {
   IsConst bool
   Left    []*Id
   Right   []Node
+}
+
+type Assignment struct {
+  Op    token.Token
+  Left  []Node
+  Right []Node
 }
 
 
@@ -67,6 +88,18 @@ func (node *String) Accept(v Visitor) {
   v.VisitString(node)
 }
 
+func (node *Selector) Accept(v Visitor) {
+  v.VisitSelector(node)
+}
+
+func (node *Subscript) Accept(v Visitor) {
+  v.VisitSubscript(node)
+}
+
+func (node *Slice) Accept(v Visitor) {
+  v.VisitSlice(node)
+}
+
 func (node *UnaryExpr) Accept(v Visitor) {
   v.VisitUnaryExpr(node)
 }
@@ -77,4 +110,8 @@ func (node *BinaryExpr) Accept(v Visitor) {
 
 func (node *Declaration) Accept(v Visitor) {
   v.VisitDeclaration(node)
+}
+
+func (node *Assignment) Accept(v Visitor) {
+  v.VisitAssignment(node)
 }
