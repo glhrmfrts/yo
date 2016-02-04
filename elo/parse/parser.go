@@ -463,6 +463,28 @@ func (p *parser) callExpr() (ast.Node, error) {
   return p.selectorOrSubscriptExpr(left)
 }
 
+func (p *parser) inheritExpr() (ast.Node, error) {
+  var right ast.Node
+
+  left, err := p.callExpr()
+  if err != nil {
+    return nil, err
+  }
+  if p.tok == token.LBRACE {
+    right, err = p.object()
+    if err != nil {
+      return nil ,err
+    }
+    child, ok := right.(*ast.Object)
+    if !ok {
+      panic(fmt.Errorf("child object is not an Object node"))
+    }
+    left = &ast.InheritExpr{Parent: left, Child: child}
+  }
+
+  return p.selectorOrSubscriptExpr(left)
+}
+
 func (p *parser) unaryExpr() (ast.Node, error) {
   if token.IsUnaryOp(p.tok) {
     op := p.tok
@@ -473,7 +495,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     if op == token.NOT {
       right, err = p.expr()
     } else {
-      right, err = p.callExpr()
+      right, err = p.inheritExpr()
     }
 
     if err != nil {
@@ -483,7 +505,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     return &ast.UnaryExpr{Op: op, Right: right}, nil
   }
 
-  return p.callExpr()
+  return p.inheritExpr()
 }
 
 // parse a binary expression using the legendary wikipedia's algorithm :)

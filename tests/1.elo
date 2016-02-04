@@ -1,5 +1,1 @@
-swapFunc := func(a) ^(b) => b, a
-
-func nice(b) {
-	a := b
-}
+parent{child: true, value: 2}.value

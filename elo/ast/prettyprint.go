@@ -190,7 +190,6 @@ func (p *Prettyprinter) VisitVarArg(node *VarArg) {
 
 func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
   p.buf.WriteString("(call\n")
-
   p.indent++
   p.doIndent()
 
@@ -202,6 +201,19 @@ func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
     arg.Accept(p)
   }
 
+  p.indent--
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitInheritExpr(node *InheritExpr) {
+  p.buf.WriteString("(inherit\n")
+  p.indent++
+  p.doIndent()
+
+  node.Parent.Accept(p)
+  p.buf.WriteString("\n")
+  p.doIndent()
+  node.Child.Accept(p)
   p.indent--
   p.buf.WriteString(")")
 }

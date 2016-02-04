@@ -79,6 +79,11 @@ type (
     Args  []Node
   }
 
+  InheritExpr struct {
+    Parent Node
+    Child  *Object
+  }
+
   UnaryExpr struct {
     Op    token.Token
     Right Node
@@ -170,6 +175,10 @@ func (node *VarArg) Accept(v Visitor) {
 
 func (node *CallExpr) Accept(v Visitor) {
   v.VisitCallExpr(node)
+}
+
+func (node *InheritExpr) Accept(v Visitor) {
+  v.VisitInheritExpr(node)
 }
 
 func (node *UnaryExpr) Accept(v Visitor) {

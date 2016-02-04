@@ -21,6 +21,7 @@ type Visitor interface {
   VisitKwArg(node *KwArg)
   VisitVarArg(node *VarArg)
   VisitCallExpr(node *CallExpr)
+  VisitInheritExpr(node *InheritExpr)
   VisitUnaryExpr(node *UnaryExpr)
   VisitBinaryExpr(node *BinaryExpr)
   VisitDeclaration(node *Declaration)
