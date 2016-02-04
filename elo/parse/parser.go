@@ -187,11 +187,17 @@ func (p *parser) functionArgs() ([]ast.Node, error) {
   }
   
   var list []ast.Node
-  if p.tok == token.RPAREN {
+  if p.accept(token.RPAREN) {
     // no arguments
     return list, nil
   }
+
+  var vararg, kwarg bool
   for p.tok == token.ID {
+    if vararg {
+      return nil, p.error("argument after variadic argument")
+    }
+
     var arg ast.Node
     id := p.makeId()
     p.next()
@@ -203,9 +209,17 @@ func (p *parser) functionArgs() ([]ast.Node, error) {
         return nil, err
       }
       arg = &ast.KwArg{Key: id.Value, Value: value}
+      kwarg = true
     } else if p.accept(token.DOTDOTDOT) {
-      arg = &ast.VarArg{Arg: arg}
+      arg = &ast.VarArg{Arg: id}
+      vararg = true
     } else {
+      if vararg {
+        return nil, p.error("positional argument after variadic argument")
+      }
+      if kwarg {
+        return nil, p.error("positional argument after keyword argument")
+      }
       arg = id
     }
 
@@ -223,7 +237,7 @@ func (p *parser) functionArgs() ([]ast.Node, error) {
 
 func (p *parser) functionBody() (ast.Node, error) {
   if p.accept(token.TILDE) {
-    // curried function
+    // '^' curried function
     if !p.accept(token.LPAREN) {
       return nil, p.errorExpected("'('")
     }
@@ -240,14 +254,14 @@ func (p *parser) functionBody() (ast.Node, error) {
     fn := &ast.Function{Args: args, Body: body}
     return &ast.ReturnStmt{Values: []ast.Node{fn}}, nil
   } else if p.accept(token.EQGT) {
-    // short function
+    // '=>' short function
     list, err := p.exprList(false)
     if err != nil {
       return nil, err
     }
     return &ast.ReturnStmt{Values: list}, nil
   } else if p.tok == token.LBRACE {
-    // regular function body
+    // '{' regular function body
     return p.block()
   }
 
@@ -258,13 +272,16 @@ func (p *parser) function() (ast.Node, error) {
   p.next() // 'func'
 
   var name ast.Node
-  if p.accept(token.ID) {
-    name := ast.Node(p.makeId())
+  if p.tok == token.ID {
+    name = ast.Node(p.makeId())
+    p.next()
+
     if p.accept(token.DOT) && p.tok == token.ID {
       name = ast.Node(p.makeSelector(name))
       p.next()
     }
   }
+
   args, err := p.functionArgs()
   if err != nil {
     return nil, err
@@ -282,6 +299,8 @@ func (p *parser) primaryExpr() (ast.Node, error) {
   // handle the ending token themselves, so 'defer p.next()'
   // needs to be after them
   switch p.tok {
+  case token.FUNC:
+    return p.function()
   case token.LBRACK:
     return p.array()
   case token.LBRACE:

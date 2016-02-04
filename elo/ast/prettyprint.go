@@ -98,8 +98,8 @@ func (p *Prettyprinter) VisitFunction(node *Function) {
   p.buf.WriteString("(func ")
   if node.Name != nil {
     node.Name.Accept(p)
-    p.buf.WriteString("\n")
   }
+  p.buf.WriteString("\n")
   p.indent++
 
   for _, a := range node.Args {

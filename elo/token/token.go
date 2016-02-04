@@ -137,6 +137,7 @@ var (
     PIPEEQ: "|=",
     TILDEEQ: "^=",
     EQEQ: "==",
+    EQGT: "=>",
     COLON: ":",
     SEMICOLON: ";",
     COMMA: ",",
