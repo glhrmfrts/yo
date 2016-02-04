@@ -40,12 +40,8 @@ func (p *parser) next() {
   }
 }
 
-func (p *parser) is(toktype token.Token) bool {
-  return p.tok == toktype
-}
-
 func (p *parser) accept(toktype token.Token) bool {
-  if p.is(toktype) {
+  if p.tok == toktype {
     p.next()
     return true
   }
@@ -55,7 +51,7 @@ func (p *parser) accept(toktype token.Token) bool {
 func (p *parser) idList() []*ast.Id {
   var list []*ast.Id
 
-  for p.is(token.ID) {
+  for p.tok == token.ID {
     list = append(list, &ast.Id{Value: p.literal})
 
     p.next()
@@ -100,9 +96,32 @@ func (p *parser) exprList() ([]ast.Node, error) {
 // grammar rules
 //
 
+func (p *parser) array() (ast.Node, error) {
+  p.next() // '['
+
+  if p.accept(token.RBRACK) {
+    // no elements
+    return &ast.Array{}, nil
+  }
+
+  list, err := p.exprList()
+  if err != nil {
+    return nil, err
+  }
+  if !p.accept(token.RBRACK) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ']'", p.tok))
+  }
+
+  return &ast.Array{Values: list}, nil
+}
+
 func (p *parser) primaryExpr() (ast.Node, error) {
-  defer p.next()
+  // these first productions before the second 'switch'
+  // handle the ending token themselves, so 'defer p.next()'
+  // needs to be after them
   switch p.tok {
+  case token.LBRACK:
+    return p.array()
   case token.LPAREN:
     p.next()
     expr, err := p.expr()
@@ -111,28 +130,32 @@ func (p *parser) primaryExpr() (ast.Node, error) {
       return nil, err
     }
 
-    if !p.is(token.RPAREN) {
+    if !p.accept(token.RPAREN) {
       return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
     }
 
     return expr, nil
-  case token.INT, token.FLOAT:
-    return &ast.Number{Type: p.tok, Value: p.literal}, nil
-  case token.ID:
-    return &ast.Id{Value: p.literal}, nil
-  case token.STRING:
-    return &ast.String{Value: p.literal}, nil
-  case token.TRUE, token.FALSE:
-    return &ast.Bool{Value: p.tok == token.TRUE}, nil
-  case token.NIL:
-    return &ast.Nil{}, nil
+  default:
+    defer p.next()
+    switch p.tok {
+    case token.INT, token.FLOAT:
+      return &ast.Number{Type: p.tok, Value: p.literal}, nil
+    case token.ID:
+      return &ast.Id{Value: p.literal}, nil
+    case token.STRING:
+      return &ast.String{Value: p.literal}, nil
+    case token.TRUE, token.FALSE:
+      return &ast.Bool{Value: p.tok == token.TRUE}, nil
+    case token.NIL:
+      return &ast.Nil{}, nil
+    }
   }
 
   return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
 }
 
 func (p *parser) selectorExpr(left ast.Node) (ast.Node, error) {
-  if !p.is(token.ID) {
+  if !(p.tok == token.ID) {
     return nil, p.error(fmt.Sprintf("unexpected %s, expecting identifier", p.tok))
   }
 
@@ -175,11 +198,11 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) (ast.Node, error) {
   }
 
   for {
-    if dot, lBrack := p.is(token.DOT), p.is(token.LBRACK); dot || lBrack {
+    if dot, lBrack := p.tok == token.DOT, p.tok == token.LBRACK; dot || lBrack {
       old := p.ignoreNewlines
       p.ignoreNewlines = false
       p.next()
-      if p.is(token.NEWLINE) || p.is(token.EOS) {
+      if p.tok == token.NEWLINE || p.tok == token.EOS {
         return nil, p.error("expression not terminated")
       }
       p.ignoreNewlines = old
@@ -204,7 +227,7 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) (ast.Node, error) {
 func (p *parser) callArgs() ([]ast.Node, error) {
   var list []ast.Node
 
-  if p.is(token.RPAREN) {
+  if p.tok == token.RPAREN {
     // no arguments
     return list, nil
   }
@@ -295,7 +318,7 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) 
     old := p.ignoreNewlines
     p.ignoreNewlines = false
     p.next()
-    if p.is(token.NEWLINE) || p.is(token.EOS) {
+    if p.tok == token.NEWLINE || p.tok == token.EOS {
       return nil, p.error("expression not terminated")
     }
     p.ignoreNewlines = old
@@ -364,7 +387,7 @@ func (p *parser) assignment() (ast.Node, error) {
   }
 
   // ':='
-  if p.is(token.COLONEQ) {
+  if p.tok == token.COLONEQ {
     // a short variable declaration
     isIdList := p.checkIdList(left)
 
@@ -397,7 +420,7 @@ func (p *parser) program() (ast.Node, error) {
   p.next()
 
   var nodes []ast.Node
-  for !p.is(token.EOS) {
+  for !(p.tok == token.EOS) {
     stmt, err := p.stmt()
     if err != nil {
       return nil, err

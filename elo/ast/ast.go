@@ -30,6 +30,10 @@ type String struct {
   Value string
 }
 
+type Array struct {
+  Values []Node
+}
+
 type Selector struct {
   Left  Node
   Key   string
@@ -105,6 +109,10 @@ func (node *Id) Accept(v Visitor) {
 
 func (node *String) Accept(v Visitor) {
   v.VisitString(node)
+}
+
+func (node *Array) Accept(v Visitor) {
+  v.VisitArray(node)
 }
 
 func (node *Selector) Accept(v Visitor) {

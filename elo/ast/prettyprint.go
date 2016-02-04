@@ -46,6 +46,20 @@ func (p *Prettyprinter) VisitString(node *String) {
   p.buf.WriteString("(string \""+ node.Value + "\")")
 }
 
+func (p *Prettyprinter) VisitArray(node *Array) {
+  p.buf.WriteString("(array")
+  p.indent++
+
+  for _, n := range node.Values {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    n.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *Prettyprinter) VisitSelector(node *Selector) {
   p.buf.WriteString("(selector\n")
 
