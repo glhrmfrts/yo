@@ -1,2 +1,4 @@
 parser.token;
 [1, 2]
+
+makeAdd := func(a) ^(b) => a + b

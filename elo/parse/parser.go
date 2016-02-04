@@ -169,6 +169,97 @@ func (p *parser) object() (ast.Node, error) {
   return &ast.Object{Fields: fields}, nil
 }
 
+func (p *parser) functionArgs() (ast.Node, error) {
+  if !p.accept(token.LPAREN) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting '('", p.tok))
+  }
+  
+  var list []ast.Node
+  if p.tok == token.RPAREN {
+    // no arguments
+    return list, nil
+  }
+  for p.tok == token.ID {
+    arg := p.makeId()
+    p.next()
+
+    // '='
+    if p.accept(token.EQ) {
+      value, err := p.expr()
+      if err != nil {
+        return nil, err
+      }
+      arg = &ast.KwArg{Key: id.Value, Value: value}
+    } else if p.accept(token.DOTDOTDOT) {
+      arg = &ast.VarArg{Arg: arg}
+    }
+
+    list = append(list, arg)
+    if !p.accept(token.COMMA) {
+      break
+    }
+  }
+
+  if !p.accept(token.RPAREN) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ')'", p.tok))
+  }
+  return list, nil
+}
+
+func (p *parser) functionBody() (ast.Node, error) {
+  if p.accept(token.TILDE) {
+    // curried function
+    if !p.accept(token.LPAREN) {
+      return nil, p.error(fmt.Sprintf("unexpected %s, expecting '('", p.tok))
+    }
+    args, err := p.functionArgs()
+    if err != nil {
+      return nil, err
+    }
+
+    body, err := p.functionBody()
+    if err != nil {
+      return nil, err
+    }
+
+    fn := &ast.Function{Args: args, Body: body}
+    return &ast.ReturnStmt{Values: []ast.Node{fn}}
+  } else if p.accept(token.EQGT) {
+    // short function
+    list, err := p.exprList()
+    if err != nil {
+      return nil, err
+    }
+    return &ast.ReturnStmt{Values: list}
+  } else if p.tok == token.LBRACE {
+    // regular function body
+    return p.block()
+  }
+}
+
+func (p *parser) function() (ast.Node, error) {
+  p.next() // 'func'
+
+  var name ast.Node
+  if p.accept(token.ID) {
+    name := p.makeId()
+    if p.accept(token.DOT) && p.tok == token.ID {
+      name = p.makeSelector(name)
+      p.next()
+    }
+  }
+  args, err := p.functionArgs()
+  if err != nil {
+    return nil, err
+  }
+
+  body, err := p.functionBody()
+  if err != nil {
+    return nil, err
+  }
+  return &ast.Function{Name: name, Args: args, Body: body}
+}
+
 func (p *parser) primaryExpr() (ast.Node, error) {
   // these first productions before the second 'switch'
   // handle the ending token themselves, so 'defer p.next()'
@@ -281,7 +372,6 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) (ast.Node, error) {
 
 func (p *parser) callArgs() ([]ast.Node, error) {
   var list []ast.Node
-
   if p.tok == token.RPAREN {
     // no arguments
     return list, nil
