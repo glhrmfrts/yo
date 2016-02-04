@@ -348,7 +348,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     case '^': tok = t.maybe1(token.TILDE, '=', token.TILDEEQ)
     case '<': tok = t.maybe2(token.LT, '=', token.LTEQ, '<', token.LTLT)
     case '>': tok = t.maybe2(token.GT, '=', token.GTEQ, '>', token.GTGT)
-    case '=': tok = t.maybe1(token.EQ, '=', token.EQEQ)
+    case '=': tok = t.maybe2(token.EQ, '=', token.EQEQ, '>', token.EQGT)
     case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
     case ';': tok = token.SEMICOLON
     case ',': tok = token.COMMA

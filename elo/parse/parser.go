@@ -34,6 +34,10 @@ func (p *parser) error(msg string) error {
   return &ParseError{guilty: p.tok, line: t.lineno, file: t.filename, message: msg}
 }
 
+func (p *parser) errorExpected(expected string) error {
+  return p.error(fmt.Sprintf("unexpected %s, expected %s", p.tok, expected))
+}
+
 func (p *parser) next() {
   p.tok, p.literal = p.tokenizer.nextToken()
 
@@ -48,6 +52,14 @@ func (p *parser) accept(toktype token.Token) bool {
     return true
   }
   return false
+}
+
+func (p *parser) makeId() *ast.Id {
+  return &ast.Id{Value: p.literal}
+}
+
+func (p *parser) makeSelector(left ast.Node) *ast.Selector {
+  return &ast.Selector{Left: left, Value: p.literal}
 }
 
 func (p *parser) idList() []*ast.Id {
@@ -144,7 +156,7 @@ func (p *parser) array() (ast.Node, error) {
     return nil, err
   }
   if !p.accept(token.RBRACK) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ']'", p.tok))
+    return nil, p.errorExpected("closing ']'")
   }
 
   return &ast.Array{Values: list}, nil
@@ -163,15 +175,15 @@ func (p *parser) object() (ast.Node, error) {
     return nil, err
   }
   if !p.accept(token.RBRACE) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing '}'", p.tok))
+    return nil, p.errorExpected("closing '}'")
   }
 
   return &ast.Object{Fields: fields}, nil
 }
 
-func (p *parser) functionArgs() (ast.Node, error) {
+func (p *parser) functionArgs() ([]ast.Node, error) {
   if !p.accept(token.LPAREN) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting '('", p.tok))
+    return nil, p.errorExpected("'('")
   }
   
   var list []ast.Node
@@ -180,7 +192,8 @@ func (p *parser) functionArgs() (ast.Node, error) {
     return list, nil
   }
   for p.tok == token.ID {
-    arg := p.makeId()
+    var arg ast.Node
+    id := p.makeId()
     p.next()
 
     // '='
@@ -192,6 +205,8 @@ func (p *parser) functionArgs() (ast.Node, error) {
       arg = &ast.KwArg{Key: id.Value, Value: value}
     } else if p.accept(token.DOTDOTDOT) {
       arg = &ast.VarArg{Arg: arg}
+    } else {
+      arg = id
     }
 
     list = append(list, arg)
@@ -201,7 +216,7 @@ func (p *parser) functionArgs() (ast.Node, error) {
   }
 
   if !p.accept(token.RPAREN) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ')'", p.tok))
+    return nil, p.errorExpected("closing ')'")
   }
   return list, nil
 }
@@ -210,7 +225,7 @@ func (p *parser) functionBody() (ast.Node, error) {
   if p.accept(token.TILDE) {
     // curried function
     if !p.accept(token.LPAREN) {
-      return nil, p.error(fmt.Sprintf("unexpected %s, expecting '('", p.tok))
+      return nil, p.errorExpected("'('")
     }
     args, err := p.functionArgs()
     if err != nil {
@@ -223,18 +238,20 @@ func (p *parser) functionBody() (ast.Node, error) {
     }
 
     fn := &ast.Function{Args: args, Body: body}
-    return &ast.ReturnStmt{Values: []ast.Node{fn}}
+    return &ast.ReturnStmt{Values: []ast.Node{fn}}, nil
   } else if p.accept(token.EQGT) {
     // short function
-    list, err := p.exprList()
+    list, err := p.exprList(false)
     if err != nil {
       return nil, err
     }
-    return &ast.ReturnStmt{Values: list}
+    return &ast.ReturnStmt{Values: list}, nil
   } else if p.tok == token.LBRACE {
     // regular function body
     return p.block()
   }
+
+  return nil, p.errorExpected("'^', '=>' or '{'")
 }
 
 func (p *parser) function() (ast.Node, error) {
@@ -242,9 +259,9 @@ func (p *parser) function() (ast.Node, error) {
 
   var name ast.Node
   if p.accept(token.ID) {
-    name := p.makeId()
+    name := ast.Node(p.makeId())
     if p.accept(token.DOT) && p.tok == token.ID {
-      name = p.makeSelector(name)
+      name = ast.Node(p.makeSelector(name))
       p.next()
     }
   }
@@ -257,7 +274,7 @@ func (p *parser) function() (ast.Node, error) {
   if err != nil {
     return nil, err
   }
-  return &ast.Function{Name: name, Args: args, Body: body}
+  return &ast.Function{Name: name, Args: args, Body: body}, nil
 }
 
 func (p *parser) primaryExpr() (ast.Node, error) {
@@ -278,7 +295,7 @@ func (p *parser) primaryExpr() (ast.Node, error) {
     }
 
     if !p.accept(token.RPAREN) {
-      return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ')'", p.tok))
+      return nil, p.errorExpected("closing ')'")
     }
 
     return expr, nil
@@ -303,11 +320,11 @@ func (p *parser) primaryExpr() (ast.Node, error) {
 
 func (p *parser) selectorExpr(left ast.Node) (ast.Node, error) {
   if !(p.tok == token.ID) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting identifier", p.tok))
+    return nil, p.errorExpected("identifier")
   }
 
   defer p.next()
-  return &ast.Selector{Left: left, Key: p.literal}, nil
+  return p.makeSelector(left), nil
 }
 
 func (p *parser) subscriptExpr(left ast.Node) (ast.Node, error) {
@@ -327,7 +344,7 @@ func (p *parser) subscriptExpr(left ast.Node) (ast.Node, error) {
   }
 
   if !p.accept(token.RBRACK) {
-    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ']'", p.tok))
+    return nil, p.errorExpected("closing ']'")
   }
 
   return sub, nil
@@ -422,7 +439,7 @@ func (p *parser) callExpr() (ast.Node, error) {
     }
 
     if !p.accept(token.RPAREN) {
-      return nil, p.error(fmt.Sprintf("unexpected %s, expected closing ')'", p.tok))
+      return nil, p.errorExpected("closing ')'")
     }
     left = &ast.CallExpr{Left: left, Args: args}
   }
@@ -560,6 +577,27 @@ func (p *parser) stmt() (ast.Node, error) {
   default:
     return p.assignment()
   }
+}
+
+func (p *parser) block() (ast.Node, error) {
+  if !p.accept(token.LBRACE) {
+    return nil, p.errorExpected("'{'")
+  }
+
+  var nodes []ast.Node
+  for !(p.tok == token.RBRACE || p.tok == token.EOS) {
+    stmt, err := p.stmt()
+    if err != nil {
+      return nil, err
+    }
+
+    nodes = append(nodes, stmt)
+  }
+
+  if !p.accept(token.RBRACE) {
+    return nil, p.errorExpected("closing '}'")
+  }
+  return &ast.Block{Nodes: nodes}, nil
 }
 
 func (p *parser) program() (ast.Node, error) {

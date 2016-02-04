@@ -14,6 +14,7 @@ type Visitor interface {
   VisitArray(node *Array)
   VisitObjectField(node *ObjectField)
   VisitObject(node *Object)
+  VisitFunction(node *Function)
   VisitSelector(node *Selector)
   VisitSubscript(node *Subscript)
   VisitSlice(node *Slice)
@@ -24,5 +25,6 @@ type Visitor interface {
   VisitBinaryExpr(node *BinaryExpr)
   VisitDeclaration(node *Declaration)
   VisitAssignment(node *Assignment)
+  VisitReturnStmt(node *ReturnStmt)
   VisitBlock(node *Block)
 }

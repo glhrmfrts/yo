@@ -64,6 +64,7 @@ const (
   MOD
   binaryOpEnd
 
+  EQGT
   COLON
   SEMICOLON
   COMMA

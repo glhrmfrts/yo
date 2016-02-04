@@ -6,98 +6,110 @@ import (
   "github.com/glhrmfrts/elo-lang/elo/token"
 )
 
-type Node interface {
-  Accept(v Visitor)
-}
+type (
+  Node interface {
+    Accept(v Visitor)
+  }
 
-type Nil struct {  
-}
+  Nil struct {  
+  }
 
-type Bool struct {
-  Value bool
-}
+  Bool struct {
+    Value bool
+  }
 
-type Number struct {
-  Type  token.Token // int or float
-  Value string
-}
+  Number struct {
+    Type  token.Token // int or float
+    Value string
+  }
 
-type Id struct {
-  Value string
-}
+  Id struct {
+    Value string
+  }
 
-type String struct {
-  Value string
-}
+  String struct {
+    Value string
+  }
 
-type Array struct {
-  Values []Node
-}
+  Array struct {
+    Values []Node
+  }
 
-type ObjectField struct {
-  Key   Node
-  Value Node
-}
+  ObjectField struct {
+    Key   Node
+    Value Node
+  }
 
-type Object struct {
-  Fields []*ObjectField
-}
+  Object struct {
+    Fields []*ObjectField
+  }
 
-type Selector struct {
-  Left  Node
-  Key   string
-}
+  Function struct {
+    Name Node
+    Args []Node
+    Body Node
+  }
 
-type Subscript struct {
-  Left  Node
-  Right Node
-}
+  Selector struct {
+    Left  Node
+    Value string
+  }
 
-type Slice struct {
-  Start Node
-  End   Node
-}
+  Subscript struct {
+    Left  Node
+    Right Node
+  }
 
-type KwArg struct {
-  Key   string
-  Value Node
-}
+  Slice struct {
+    Start Node
+    End   Node
+  }
 
-type VarArg struct {
-  Arg Node
-}
+  KwArg struct {
+    Key   string
+    Value Node
+  }
 
-type CallExpr struct {
-  Left  Node
-  Args  []Node
-}
+  VarArg struct {
+    Arg Node
+  }
 
-type UnaryExpr struct {
-  Op    token.Token
-  Right Node
-}
+  CallExpr struct {
+    Left  Node
+    Args  []Node
+  }
 
-type BinaryExpr struct {
-  Op    token.Token
-  Left  Node
-  Right Node
-}
+  UnaryExpr struct {
+    Op    token.Token
+    Right Node
+  }
 
-type Declaration struct {
-  IsConst bool
-  Left    []*Id
-  Right   []Node
-}
+  BinaryExpr struct {
+    Op    token.Token
+    Left  Node
+    Right Node
+  }
 
-type Assignment struct {
-  Op    token.Token
-  Left  []Node
-  Right []Node
-}
+  Declaration struct {
+    IsConst bool
+    Left    []*Id
+    Right   []Node
+  }
 
-type Block struct {
-  Nodes []Node
-}
+  Assignment struct {
+    Op    token.Token
+    Left  []Node
+    Right []Node
+  }
+
+  ReturnStmt struct {
+    Values []Node
+  }
+
+  Block struct {
+    Nodes []Node
+  }
+)
 
 
 func (node *Nil) Accept(v Visitor) {
@@ -130,6 +142,10 @@ func (node *ObjectField) Accept(v Visitor) {
 
 func (node *Object) Accept(v Visitor) {
   v.VisitObject(node)
+}
+
+func (node *Function) Accept(v Visitor) {
+  v.VisitFunction(node)
 }
 
 func (node *Selector) Accept(v Visitor) {
@@ -170,6 +186,10 @@ func (node *Declaration) Accept(v Visitor) {
 
 func (node *Assignment) Accept(v Visitor) {
   v.VisitAssignment(node)
+}
+
+func (node *ReturnStmt) Accept(v Visitor) {
+  v.VisitReturnStmt(node)
 }
 
 func (node *Block) Accept(v Visitor) {

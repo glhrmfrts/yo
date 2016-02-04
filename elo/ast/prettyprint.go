@@ -94,6 +94,30 @@ func (p *Prettyprinter) VisitObject(node *Object) {
   p.buf.WriteString(")")
 }
 
+func (p *Prettyprinter) VisitFunction(node *Function) {
+  p.buf.WriteString("(func ")
+  if node.Name != nil {
+    node.Name.Accept(p)
+    p.buf.WriteString("\n")
+  }
+  p.indent++
+
+  for _, a := range node.Args {
+    p.doIndent()
+    a.Accept(p)
+    p.buf.WriteString("\n")
+  }
+
+  p.doIndent()
+  p.buf.WriteString("->\n")
+
+  p.doIndent()
+  node.Body.Accept(p)
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *Prettyprinter) VisitSelector(node *Selector) {
   p.buf.WriteString("(selector\n")
 
@@ -106,7 +130,7 @@ func (p *Prettyprinter) VisitSelector(node *Selector) {
   p.doIndent()
 
   p.indent--
-  p.buf.WriteString("'" + node.Key + "')")
+  p.buf.WriteString("'" + node.Value + "')")
 }
 
 func (p *Prettyprinter) VisitSubscript(node *Subscript) {
@@ -258,6 +282,20 @@ func (p *Prettyprinter) VisitAssignment(node *Assignment) {
 
   p.indent--
   p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
+  p.buf.WriteString("(return")
+  p.indent++
+
+  for _, v := range node.Values {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    v.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString("\n")
 }
 
 func (p *Prettyprinter) VisitBlock(node *Block) {
