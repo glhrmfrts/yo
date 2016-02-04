@@ -1,2 +1,2 @@
-parser.token
-a = [1, 2,]
+parser.token;
+[1, 2]

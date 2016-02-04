@@ -1,6 +1,5 @@
 package parse
 
-// TODO: figure out where to put the semicolon check
 
 import (
   "fmt"
@@ -464,6 +463,7 @@ func (p *parser) assignment() (ast.Node, error) {
 }
 
 func (p *parser) stmt() (ast.Node, error) {
+  defer p.accept(token.SEMICOLON)
   switch p.tok {
   case token.CONST, token.VAR:
     return p.declaration()
