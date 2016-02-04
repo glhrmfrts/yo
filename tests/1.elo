@@ -1,2 +1,2 @@
-parser.token()
-parser.error()
+parser.token
+a = [1, 2,]

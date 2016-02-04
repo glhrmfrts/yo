@@ -60,6 +60,40 @@ func (p *Prettyprinter) VisitArray(node *Array) {
   p.buf.WriteString(")")
 }
 
+func (p *Prettyprinter) VisitObjectField(node *ObjectField) {
+  p.buf.WriteString("(field\n")
+  p.indent++
+  p.doIndent()
+
+  if node.Key != nil {
+    node.Key.Accept(p)
+  }
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+
+  if node.Value != nil {
+    node.Value.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitObject(node *Object) {
+  p.buf.WriteString("(object")
+  p.indent++
+
+  for _, f := range node.Fields {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    f.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *Prettyprinter) VisitSelector(node *Selector) {
   p.buf.WriteString("(selector\n")
 

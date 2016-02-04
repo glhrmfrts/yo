@@ -34,6 +34,15 @@ type Array struct {
   Values []Node
 }
 
+type ObjectField struct {
+  Key   Node
+  Value Node
+}
+
+type Object struct {
+  Fields []*ObjectField
+}
+
 type Selector struct {
   Left  Node
   Key   string
@@ -113,6 +122,14 @@ func (node *String) Accept(v Visitor) {
 
 func (node *Array) Accept(v Visitor) {
   v.VisitArray(node)
+}
+
+func (node *ObjectField) Accept(v Visitor) {
+  v.VisitObjectField(node)
+}
+
+func (node *Object) Accept(v Visitor) {
+  v.VisitObject(node)
 }
 
 func (node *Selector) Accept(v Visitor) {

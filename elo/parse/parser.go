@@ -1,5 +1,7 @@
 package parse
 
+// TODO: figure out where to put the semicolon check
+
 import (
   "fmt"
   "github.com/glhrmfrts/elo-lang/elo/ast"
@@ -14,6 +16,7 @@ type parser struct {
 }
 
 type ParseError struct {
+  guilty    token.Token
   line      int
   file      string
   message   string
@@ -29,7 +32,7 @@ func (err *ParseError) Error() string {
 
 func (p *parser) error(msg string) error {
   t := p.tokenizer
-  return &ParseError{line: t.lineno, file: t.filename, message: msg}
+  return &ParseError{guilty: p.tok, line: t.lineno, file: t.filename, message: msg}
 }
 
 func (p *parser) next() {
@@ -74,16 +77,49 @@ func (p *parser) checkIdList(list []ast.Node) bool {
   return true
 }
 
-func (p *parser) exprList() ([]ast.Node, error) {
+func (p *parser) exprList(inArray bool) ([]ast.Node, error) {
   var list []ast.Node
-
   for {
+    // trailing comma check
+    if inArray && p.tok == token.RBRACK {
+      break
+    }
+
     expr, err := p.expr()
     if err != nil {
       return nil, err
     }
-
     list = append(list, expr)
+    if !p.accept(token.COMMA) {
+      break
+    }
+  }
+
+  return list, nil
+}
+
+func (p *parser) objectFieldList() ([]*ast.ObjectField, error) {
+  var list []*ast.ObjectField
+  for {
+    // trailing comma check
+    if p.tok == token.RBRACE {
+      break
+    }
+
+    key, err := p.expr()
+    if err != nil {
+      return nil, err
+    }
+    if !p.accept(token.COLON) {
+      list = append(list, &ast.ObjectField{Key: key})
+    } else {
+      value, err := p.expr()
+      if err != nil {
+        return nil, err
+      }
+      list = append(list, &ast.ObjectField{Key: key, Value: value})
+    }
+
     if !p.accept(token.COMMA) {
       break
     }
@@ -104,7 +140,7 @@ func (p *parser) array() (ast.Node, error) {
     return &ast.Array{}, nil
   }
 
-  list, err := p.exprList()
+  list, err := p.exprList(true)
   if err != nil {
     return nil, err
   }
@@ -115,6 +151,25 @@ func (p *parser) array() (ast.Node, error) {
   return &ast.Array{Values: list}, nil
 }
 
+func (p *parser) object() (ast.Node, error) {
+  p.next() // '{'
+
+  if p.accept(token.RBRACE) {
+    // no elements
+    return &ast.Object{}, nil
+  }
+
+  fields, err := p.objectFieldList()
+  if err != nil {
+    return nil, err
+  }
+  if !p.accept(token.RBRACE) {
+    return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing '}'", p.tok))
+  }
+
+  return &ast.Object{Fields: fields}, nil
+}
+
 func (p *parser) primaryExpr() (ast.Node, error) {
   // these first productions before the second 'switch'
   // handle the ending token themselves, so 'defer p.next()'
@@ -122,6 +177,8 @@ func (p *parser) primaryExpr() (ast.Node, error) {
   switch p.tok {
   case token.LBRACK:
     return p.array()
+  case token.LBRACE:
+    return p.object()
   case token.LPAREN:
     p.next()
     expr, err := p.expr()
@@ -131,7 +188,7 @@ func (p *parser) primaryExpr() (ast.Node, error) {
     }
 
     if !p.accept(token.RPAREN) {
-      return nil, p.error(fmt.Sprintf("unexpected %s", p.tok))
+      return nil, p.error(fmt.Sprintf("unexpected %s, expecting closing ')'", p.tok))
     }
 
     return expr, nil
@@ -170,7 +227,6 @@ func (p *parser) subscriptExpr(left ast.Node) (ast.Node, error) {
   }
 
   sub := &ast.Subscript{Left: left, Right: expr}
-
   if p.accept(token.COLON) {
     expr2, err := p.expr()
     if err != nil {
@@ -364,7 +420,7 @@ func (p *parser) declaration() (ast.Node, error) {
     return &ast.Declaration{IsConst: isConst, Left: left}, nil
   }
 
-  right, err := p.exprList()
+  right, err := p.exprList(false)
   if err != nil {
     return nil, err
   }
@@ -373,7 +429,7 @@ func (p *parser) declaration() (ast.Node, error) {
 }
 
 func (p *parser) assignment() (ast.Node, error) {
-  left, err := p.exprList()
+  left, err := p.exprList(false)
   if err != nil {
     return nil, err
   }
@@ -399,7 +455,7 @@ func (p *parser) assignment() (ast.Node, error) {
   op := p.tok
   p.next()
 
-  right, err := p.exprList()
+  right, err := p.exprList(false)
   if err != nil {
     return nil, err
   }

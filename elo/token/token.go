@@ -65,6 +65,7 @@ const (
   binaryOpEnd
 
   COLON
+  SEMICOLON
   COMMA
   DOT
   DOTDOTDOT
@@ -136,6 +137,7 @@ var (
     TILDEEQ: "^=",
     EQEQ: "==",
     COLON: ":",
+    SEMICOLON: ";",
     COMMA: ",",
     DOT: ".",
     DOTDOTDOT: "...",

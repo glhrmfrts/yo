@@ -263,8 +263,6 @@ func (t *tokenizer) scanString(quote rune) string {
     }
     result += string(ch)
   }
-
-  t.nextChar()
   return result
 }
 
@@ -352,6 +350,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     case '>': tok = t.maybe2(token.GT, '=', token.GTEQ, '>', token.GTGT)
     case '=': tok = t.maybe1(token.EQ, '=', token.EQEQ)
     case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
+    case ';': tok = token.SEMICOLON
     case ',': tok = token.COMMA
     case '!': tok = t.maybe1(token.BANG, '=', token.BANGEQ)
     case '(': tok = token.LPAREN
@@ -393,6 +392,7 @@ func makeTokenizer(source []byte, filename string) *tokenizer {
   tok := &tokenizer{
     src: source,
     filename: filename,
+    lineno: 1,
   }
   tok.nextChar()
   return tok

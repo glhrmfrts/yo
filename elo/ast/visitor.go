@@ -12,6 +12,8 @@ type Visitor interface {
   VisitId(node *Id)
   VisitString(node *String)
   VisitArray(node *Array)
+  VisitObjectField(node *ObjectField)
+  VisitObject(node *Object)
   VisitSelector(node *Selector)
   VisitSubscript(node *Subscript)
   VisitSlice(node *Slice)
