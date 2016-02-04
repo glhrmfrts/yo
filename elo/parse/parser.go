@@ -238,9 +238,6 @@ func (p *parser) functionArgs() ([]ast.Node, error) {
 func (p *parser) functionBody() (ast.Node, error) {
   if p.accept(token.TILDE) {
     // '^' curried function
-    if !p.accept(token.LPAREN) {
-      return nil, p.errorExpected("'('")
-    }
     args, err := p.functionArgs()
     if err != nil {
       return nil, err

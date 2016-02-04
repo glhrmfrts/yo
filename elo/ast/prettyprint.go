@@ -295,15 +295,21 @@ func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
   }
 
   p.indent--
-  p.buf.WriteString("\n")
+  p.buf.WriteString(")")
 }
 
 func (p *Prettyprinter) VisitBlock(node *Block) {
+  p.buf.WriteString("(block")
+  p.indent++
+
   for _, n := range node.Nodes {
+    p.buf.WriteString("\n")
     p.doIndent()
     n.Accept(p)
-    p.buf.WriteString("\n")
   }
+
+  p.indent--
+  p.buf.WriteString(")")
 }
 
 func Prettyprint(root Node, indentSize int) string {
