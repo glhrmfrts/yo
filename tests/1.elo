@@ -1,3 +1,23 @@
-for user in getUsers() {
+fmt := import("fmt")
+ioutil := import("io/ioutil")
+args := import("os").args
+parse := import("elo/parse")
 
+func main() {
+	filename, ok := args[1]
+	if !ok {
+		println('Please inform the filename!')
+	}
+
+	contents, err := ioutil.readFile()
+	if err {
+		panic(err)
+	}
+
+	root, err := parse.parseFile(contents, filename)
+	if err {
+		panic(err)
+	}
+
+	return 0
 }
