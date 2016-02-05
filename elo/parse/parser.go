@@ -11,7 +11,7 @@ type parser struct {
   tok             token.Token
   literal         string
   ignoreNewlines  bool
-  tokenizer       *tokenizer
+  tokenizer       tokenizer
 }
 
 type ParseError struct {
@@ -735,8 +735,6 @@ func (p *parser) block() (ast.Node, error) {
 }
 
 func (p *parser) program() (ast.Node, error) {
-  p.next()
-
   var nodes []ast.Node
   for !(p.tok == token.EOS) {
     stmt, err := p.stmt()
@@ -754,15 +752,22 @@ func (p *parser) program() (ast.Node, error) {
 // initialization of parser
 //
 
-func makeParser(source []byte, filename string) *parser {
-  p := &parser{
-    ignoreNewlines: true,
-    tokenizer: makeTokenizer(source, filename),
-  }
-  return p
+func (p *parser) init(source []byte, filename string) {
+  p.ignoreNewlines = true
+  p.tokenizer.init(source, filename)
+
+  // fetch the first token
+  p.next()
 }
 
-func Parse(source []byte, filename string) (ast.Node, error) {
-  p := makeParser(source, filename)
+func ParseExpr(source []byte) (ast.Node, error) {
+  var p parser
+  p.init(source, "")
+  return p.expr()
+}
+
+func ParseFile(source []byte, filename string) (ast.Node, error) {
+  var p parser
+  p.init(source, filename)
   return p.program()
 }

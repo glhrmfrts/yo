@@ -15,7 +15,7 @@ func main() {
     panic(err)
   }
 
-	root, err := parse.Parse(source, filename)
+	root, err := parse.ParseFile(source, filename)
   if err != nil {
     fmt.Println(err.Error())
     return

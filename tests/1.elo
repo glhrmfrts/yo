@@ -1,23 +1,8 @@
-fmt := import("fmt")
-ioutil := import("io/ioutil")
-args := import("os").args
-parse := import("elo/parse")
+fmt, os := import('fmt'), import('os')
 
+// there is really no 'main' function
+// and this is a comment
 func main() {
-	filename, ok := args[1]
-	if !ok {
-		println('Please inform the filename!')
-	}
-
-	contents, err := ioutil.readFile()
-	if err {
-		panic(err)
-	}
-
-	root, err := parse.parseFile(contents, filename)
-	if err {
-		panic(err)
-	}
-
-	return 0
+	fmt.printf("Ratatat %s", 'N I C E \u00ff')
+	os.exit(1)
 }

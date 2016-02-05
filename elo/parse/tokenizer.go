@@ -327,9 +327,8 @@ func (t *tokenizer) nextToken() (token.Token, string) {
         return t.nextToken()
       }
 
-      defer t.nextChar()
-
       if t.r == '=' {
+        t.nextChar()
         return token.DIVEQ, "/="
       }
       return token.DIV, "/"
@@ -388,12 +387,11 @@ func (t *tokenizer) nextToken() (token.Token, string) {
   return token.ILLEGAL, ""
 }
 
-func makeTokenizer(source []byte, filename string) *tokenizer {
-  tok := &tokenizer{
-    src: source,
-    filename: filename,
-    lineno: 1,
-  }
-  tok.nextChar()
-  return tok
+func (t *tokenizer) init(source []byte, filename string) {
+  t.src = source
+  t.filename = filename
+  t.lineno = 1
+
+  // fetch the first char
+  t.nextChar()
 }

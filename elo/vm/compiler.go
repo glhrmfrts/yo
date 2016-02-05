@@ -3,6 +3,10 @@ package vm
 type compiler struct {
 }
 
+//
+// visitor interface functions
+//
+
 func (c *compiler) VisitNil(node *ast.Nil) {
 
 }
