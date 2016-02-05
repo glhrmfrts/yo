@@ -1,1 +1,3 @@
-parent{child: true, value: 2}.value
+for user in getUsers() {
+
+}

@@ -109,6 +109,29 @@ func (p *parser) exprList(inArray bool) ([]ast.Node, error) {
   return list, nil
 }
 
+//
+// grammar rules
+//
+
+func (p *parser) array() (ast.Node, error) {
+  p.next() // '['
+
+  if p.accept(token.RBRACK) {
+    // no elements
+    return &ast.Array{}, nil
+  }
+
+  list, err := p.exprList(true)
+  if err != nil {
+    return nil, err
+  }
+  if !p.accept(token.RBRACK) {
+    return nil, p.errorExpected("closing ']'")
+  }
+
+  return &ast.Array{Values: list}, nil
+}
+
 func (p *parser) objectFieldList() ([]*ast.ObjectField, error) {
   var list []*ast.ObjectField
   for {
@@ -137,29 +160,6 @@ func (p *parser) objectFieldList() ([]*ast.ObjectField, error) {
   }
 
   return list, nil
-}
-
-//
-// grammar rules
-//
-
-func (p *parser) array() (ast.Node, error) {
-  p.next() // '['
-
-  if p.accept(token.RBRACK) {
-    // no elements
-    return &ast.Array{}, nil
-  }
-
-  list, err := p.exprList(true)
-  if err != nil {
-    return nil, err
-  }
-  if !p.accept(token.RBRACK) {
-    return nil, p.errorExpected("closing ']'")
-  }
-
-  return &ast.Array{Values: list}, nil
 }
 
 func (p *parser) object() (ast.Node, error) {
@@ -249,14 +249,18 @@ func (p *parser) functionBody() (ast.Node, error) {
     }
 
     fn := &ast.Function{Args: args, Body: body}
-    return &ast.ReturnStmt{Values: []ast.Node{fn}}, nil
+    return &ast.Block{
+      Nodes: []ast.Node{ &ast.ReturnStmt{Values: []ast.Node{fn}} },
+    }, nil
   } else if p.accept(token.EQGT) {
     // '=>' short function
     list, err := p.exprList(false)
     if err != nil {
       return nil, err
     }
-    return &ast.ReturnStmt{Values: list}, nil
+    return &ast.Block{
+      Nodes: []ast.Node{ &ast.ReturnStmt{Values: list} },
+    }, nil
   } else if p.tok == token.LBRACE {
     // '{' regular function body
     return p.block()
@@ -463,28 +467,6 @@ func (p *parser) callExpr() (ast.Node, error) {
   return p.selectorOrSubscriptExpr(left)
 }
 
-func (p *parser) inheritExpr() (ast.Node, error) {
-  var right ast.Node
-
-  left, err := p.callExpr()
-  if err != nil {
-    return nil, err
-  }
-  if p.tok == token.LBRACE {
-    right, err = p.object()
-    if err != nil {
-      return nil ,err
-    }
-    child, ok := right.(*ast.Object)
-    if !ok {
-      panic(fmt.Errorf("child object is not an Object node"))
-    }
-    left = &ast.InheritExpr{Parent: left, Child: child}
-  }
-
-  return p.selectorOrSubscriptExpr(left)
-}
-
 func (p *parser) unaryExpr() (ast.Node, error) {
   if token.IsUnaryOp(p.tok) {
     op := p.tok
@@ -495,7 +477,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     if op == token.NOT {
       right, err = p.expr()
     } else {
-      right, err = p.inheritExpr()
+      right, err = p.callExpr()
     }
 
     if err != nil {
@@ -505,7 +487,7 @@ func (p *parser) unaryExpr() (ast.Node, error) {
     return &ast.UnaryExpr{Op: op, Right: right}, nil
   }
 
-  return p.inheritExpr()
+  return p.callExpr()
 }
 
 // parse a binary expression using the legendary wikipedia's algorithm :)
@@ -609,12 +591,126 @@ func (p *parser) assignment() (ast.Node, error) {
 
 func (p *parser) stmt() (ast.Node, error) {
   defer p.accept(token.SEMICOLON)
-  switch p.tok {
+  switch tok := p.tok; tok {
   case token.CONST, token.VAR:
     return p.declaration()
+  case token.BREAK, token.CONTINUE, token.FALLTHROUGH:
+    p.next()
+    return &ast.BranchStmt{Type: tok}, nil
+  case token.RETURN:
+    p.next()
+    values, err := p.exprList(false)
+    if err != nil {
+      return nil, err
+    }
+    return &ast.ReturnStmt{Values: values}, nil
+  case token.IF:
+    return p.ifStmt()
+  case token.FOR:
+    return p.forStmt()
   default:
     return p.assignment()
   }
+}
+
+func (p *parser) ifStmt() (ast.Node, error) {
+  p.next() // 'if'
+
+  var init *ast.Assignment
+  var else_ ast.Node
+  cond, err := p.assignment()
+  if err != nil {
+    return nil, err
+  }
+
+  init, ok := cond.(*ast.Assignment)
+  if ok {
+    if !p.accept(token.SEMICOLON) {
+      return nil, p.errorExpected("';'")
+    }
+    cond, err = p.expr()
+    if err != nil {
+      return nil, err
+    }
+  }
+
+  body, err := p.block()
+  if err != nil {
+    return nil, err
+  }
+
+  if p.accept(token.ELSE) {
+    if p.tok == token.LBRACE {
+      else_, err = p.block()
+    } else if p.tok == token.IF {
+      else_, err = p.ifStmt()
+    } else {
+      err = p.errorExpected("if or '{'")
+    }
+
+    if err != nil {
+      return nil, err
+    }
+  }
+
+  return &ast.IfStmt{Init: init, Cond: cond, Body: body, Else: else_}, nil
+}
+
+func (p *parser) forIteratorStmt(id *ast.Id) (ast.Node, error) {
+  p.next() // 'in'
+
+  coll, err := p.expr()
+  if err != nil {
+    return nil, err
+  }
+
+  body, err := p.block()
+  return &ast.ForIteratorStmt{Iterator: id, Collection: coll, Body: body}, nil
+}
+
+func (p *parser) forStmt() (ast.Node, error) {
+  p.next() // 'for'
+
+  var init *ast.Assignment
+  var cond ast.Node
+  var step ast.Node
+  var err error
+  var ok bool
+  if p.tok == token.LBRACE {
+    goto parseBody
+  }
+
+  cond, err = p.assignment()
+  if err != nil {
+    return nil, err
+  }
+
+  init, ok = cond.(*ast.Assignment)
+  if ok {
+    if !p.accept(token.SEMICOLON) {
+      return nil, p.errorExpected("';'")
+    }
+    if p.tok == token.LBRACE {
+      goto parseBody
+    }
+    cond, err = p.expr()
+    if err != nil {
+      return nil, err
+    }
+  } else if id, ok := cond.(*ast.Id); ok && p.tok == token.IN {
+    return p.forIteratorStmt(id)
+  }
+
+  if p.accept(token.SEMICOLON) && p.tok != token.LBRACE {
+    step, err = p.assignment()
+    if err != nil {
+      return nil, err
+    }
+  }
+
+parseBody:
+  body, err := p.block()
+  return &ast.ForStmt{Init: init, Cond: cond, Step: step, Body: body}, nil
 }
 
 func (p *parser) block() (ast.Node, error) {

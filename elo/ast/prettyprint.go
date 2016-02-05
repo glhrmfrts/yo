@@ -205,19 +205,6 @@ func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitInheritExpr(node *InheritExpr) {
-  p.buf.WriteString("(inherit\n")
-  p.indent++
-  p.doIndent()
-
-  node.Parent.Accept(p)
-  p.buf.WriteString("\n")
-  p.doIndent()
-  node.Child.Accept(p)
-  p.indent--
-  p.buf.WriteString(")")
-}
-
 func (p *Prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
   p.buf.WriteString(fmt.Sprintf("(unary %s\n", node.Op))
   
@@ -296,6 +283,10 @@ func (p *Prettyprinter) VisitAssignment(node *Assignment) {
   p.buf.WriteString(")")
 }
 
+func (p *Prettyprinter) VisitBranchStmt(node *BranchStmt) {
+  p.buf.WriteString(fmt.Sprintf("(%s)", node.Type))
+}
+
 func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
   p.buf.WriteString("(return")
   p.indent++
@@ -306,6 +297,79 @@ func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
     v.Accept(p)
   }
 
+  p.indent--
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitIfStmt(node *IfStmt) {
+  p.buf.WriteString("(if\n")
+  p.indent++
+  
+  if node.Init != nil {
+    p.doIndent()
+    node.Init.Accept(p)
+    p.buf.WriteString("\n")
+  }
+
+  p.doIndent()
+  node.Cond.Accept(p)
+  p.buf.WriteString("\n")
+
+  p.doIndent()
+  node.Body.Accept(p)
+  p.buf.WriteString("\n")
+  p.doIndent()
+
+  if node.Else != nil {
+    node.Else.Accept(p)
+  }
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
+func (p *Prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt) {
+  p.buf.WriteString("(for iterator\n")
+  p.indent++
+  p.doIndent()
+  node.Iterator.Accept(p)
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+  node.Collection.Accept(p)
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+  node.Body.Accept(p)
+
+  p.indent--
+  p.buf.WriteString("\n")
+}
+
+func (p *Prettyprinter) VisitForStmt(node *ForStmt) {
+  p.buf.WriteString("(for\n")
+  p.indent++
+
+  if node.Init != nil {
+    p.doIndent()
+    node.Init.Accept(p)
+    p.buf.WriteString("\n")
+  }
+
+  if node.Cond != nil {
+    p.doIndent()
+    node.Cond.Accept(p)
+    p.buf.WriteString("\n")
+  }
+
+  p.doIndent()
+  if node.Step != nil {
+    node.Step.Accept(p)
+    p.buf.WriteString("\n")
+    p.doIndent()
+  }
+
+  node.Body.Accept(p)
   p.indent--
   p.buf.WriteString(")")
 }

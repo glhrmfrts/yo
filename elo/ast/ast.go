@@ -79,11 +79,6 @@ type (
     Args  []Node
   }
 
-  InheritExpr struct {
-    Parent Node
-    Child  *Object
-  }
-
   UnaryExpr struct {
     Op    token.Token
     Right Node
@@ -107,8 +102,32 @@ type (
     Right []Node
   }
 
+  BranchStmt struct {
+    Type token.Token // BREAK, CONTINUE or FALLTHROUGH
+  }
+
   ReturnStmt struct {
     Values []Node
+  }
+
+  IfStmt struct {
+    Init *Assignment
+    Cond Node
+    Body Node
+    Else Node
+  }
+
+  ForIteratorStmt struct {
+    Iterator   *Id
+    Collection Node
+    Body       Node
+  }
+
+  ForStmt struct {
+    Init *Assignment
+    Cond Node
+    Step Node
+    Body Node
   }
 
   Block struct {
@@ -177,10 +196,6 @@ func (node *CallExpr) Accept(v Visitor) {
   v.VisitCallExpr(node)
 }
 
-func (node *InheritExpr) Accept(v Visitor) {
-  v.VisitInheritExpr(node)
-}
-
 func (node *UnaryExpr) Accept(v Visitor) {
   v.VisitUnaryExpr(node)
 }
@@ -197,8 +212,24 @@ func (node *Assignment) Accept(v Visitor) {
   v.VisitAssignment(node)
 }
 
+func (node *BranchStmt) Accept(v Visitor) {
+  v.VisitBranchStmt(node)
+}
+
 func (node *ReturnStmt) Accept(v Visitor) {
   v.VisitReturnStmt(node)
+}
+
+func (node *IfStmt) Accept(v Visitor) {
+  v.VisitIfStmt(node)
+}
+
+func (node *ForIteratorStmt) Accept(v Visitor) {
+  v.VisitForIteratorStmt(node)
+}
+
+func (node *ForStmt) Accept(v Visitor) {
+  v.VisitForStmt(node)
 }
 
 func (node *Block) Accept(v Visitor) {

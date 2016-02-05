@@ -17,7 +17,12 @@ const (
   FUNC
   CONST
   VAR
+  BREAK
+  CONTINUE
+  FALLTHROUGH
+  RETURN
   NOT
+  IN
   ID
   STRING
   INT
@@ -92,7 +97,12 @@ var (
     "func": FUNC,
     "const": CONST,
     "var": VAR,
+    "break": BREAK,
+    "continue": CONTINUE,
+    "fallthrough": FALLTHROUGH,
+    "return": RETURN,
     "not": NOT,
+    "in": IN,
   }
 
   // descriptive representation of tokens
@@ -105,7 +115,14 @@ var (
     ELSE: "else",
     FOR: "for",
     FUNC: "func",
+    CONST: "const",
+    VAR: "var",
+    BREAK: "break",
+    CONTINUE: "continue",
+    FALLTHROUGH: "fallthrough",
+    RETURN: "return",
     NOT: "not",
+    IN: "in",
     ID: "identifier",
     STRING: "string",
     INT: "int",
