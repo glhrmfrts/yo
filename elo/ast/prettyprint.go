@@ -8,23 +8,23 @@ import (
   //"github.com/glhrmfrts/elo-lang/elo/token"
 )
 
-type Prettyprinter struct {
+type prettyprinter struct {
   indent int
   indentSize int
   buf bytes.Buffer
 }
 
-func (p *Prettyprinter) doIndent() {
+func (p *prettyprinter) doIndent() {
   for i := 0; i < p.indent * p.indentSize; i++ {
     p.buf.WriteString(" ")
   }
 }
 
-func (p *Prettyprinter) VisitNil(node *Nil) {
+func (p *prettyprinter) VisitNil(node *Nil) {
   p.buf.WriteString("(nil)")
 }
 
-func (p *Prettyprinter) VisitBool(node *Bool) {
+func (p *prettyprinter) VisitBool(node *Bool) {
   var val string
   if node.Value {
     val = "true"
@@ -34,19 +34,19 @@ func (p *Prettyprinter) VisitBool(node *Bool) {
   p.buf.WriteString("(" + val + ")")
 }
 
-func (p *Prettyprinter) VisitNumber(node *Number) {
+func (p *prettyprinter) VisitNumber(node *Number) {
   p.buf.WriteString(fmt.Sprintf("(%s %s)", node.Type, node.Value))
 }
 
-func (p *Prettyprinter) VisitId(node *Id) {
+func (p *prettyprinter) VisitId(node *Id) {
   p.buf.WriteString("(id " + node.Value + ")")
 }
 
-func (p *Prettyprinter) VisitString(node *String) {
+func (p *prettyprinter) VisitString(node *String) {
   p.buf.WriteString("(string \""+ node.Value + "\")")
 }
 
-func (p *Prettyprinter) VisitArray(node *Array) {
+func (p *prettyprinter) VisitArray(node *Array) {
   p.buf.WriteString("(array")
   p.indent++
 
@@ -60,7 +60,7 @@ func (p *Prettyprinter) VisitArray(node *Array) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitObjectField(node *ObjectField) {
+func (p *prettyprinter) VisitObjectField(node *ObjectField) {
   p.buf.WriteString("(field\n")
   p.indent++
   p.doIndent()
@@ -80,7 +80,7 @@ func (p *Prettyprinter) VisitObjectField(node *ObjectField) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitObject(node *Object) {
+func (p *prettyprinter) VisitObject(node *Object) {
   p.buf.WriteString("(object")
   p.indent++
 
@@ -94,7 +94,7 @@ func (p *Prettyprinter) VisitObject(node *Object) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitFunction(node *Function) {
+func (p *prettyprinter) VisitFunction(node *Function) {
   p.buf.WriteString("(func ")
   if node.Name != nil {
     node.Name.Accept(p)
@@ -118,7 +118,7 @@ func (p *Prettyprinter) VisitFunction(node *Function) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitSelector(node *Selector) {
+func (p *prettyprinter) VisitSelector(node *Selector) {
   p.buf.WriteString("(selector\n")
 
   p.indent++
@@ -133,7 +133,7 @@ func (p *Prettyprinter) VisitSelector(node *Selector) {
   p.buf.WriteString("'" + node.Value + "')")
 }
 
-func (p *Prettyprinter) VisitSubscript(node *Subscript) {
+func (p *prettyprinter) VisitSubscript(node *Subscript) {
   p.buf.WriteString("(subscript\n")
 
   p.indent++
@@ -150,7 +150,7 @@ func (p *Prettyprinter) VisitSubscript(node *Subscript) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitSlice(node *Slice) {
+func (p *prettyprinter) VisitSlice(node *Slice) {
   p.buf.WriteString("(slice\n")
 
   p.indent++
@@ -167,7 +167,7 @@ func (p *Prettyprinter) VisitSlice(node *Slice) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitKwArg(node *KwArg) {
+func (p *prettyprinter) VisitKwArg(node *KwArg) {
   p.buf.WriteString("(kwarg\n")
 
   p.indent++
@@ -182,13 +182,13 @@ func (p *Prettyprinter) VisitKwArg(node *KwArg) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitVarArg(node *VarArg) {
+func (p *prettyprinter) VisitVarArg(node *VarArg) {
   p.buf.WriteString("(vararg ")
   node.Arg.Accept(p)
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
+func (p *prettyprinter) VisitCallExpr(node *CallExpr) {
   p.buf.WriteString("(call\n")
   p.indent++
   p.doIndent()
@@ -205,7 +205,7 @@ func (p *Prettyprinter) VisitCallExpr(node *CallExpr) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
+func (p *prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
   p.buf.WriteString(fmt.Sprintf("(unary %s\n", node.Op))
   
   p.indent++
@@ -217,7 +217,7 @@ func (p *Prettyprinter) VisitUnaryExpr(node *UnaryExpr) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
+func (p *prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
   p.buf.WriteString(fmt.Sprintf("(binary %s\n", node.Op))
 
   p.indent++
@@ -234,7 +234,7 @@ func (p *Prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitDeclaration(node *Declaration) {
+func (p *prettyprinter) VisitDeclaration(node *Declaration) {
   keyword := "var"
   if node.IsConst {
     keyword = "const"
@@ -259,7 +259,7 @@ func (p *Prettyprinter) VisitDeclaration(node *Declaration) {
   p.buf.WriteString(")") 
 }
 
-func (p *Prettyprinter) VisitAssignment(node *Assignment) {
+func (p *prettyprinter) VisitAssignment(node *Assignment) {
   p.buf.WriteString("(assignment")
   p.indent++
 
@@ -283,11 +283,11 @@ func (p *Prettyprinter) VisitAssignment(node *Assignment) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitBranchStmt(node *BranchStmt) {
+func (p *prettyprinter) VisitBranchStmt(node *BranchStmt) {
   p.buf.WriteString(fmt.Sprintf("(%s)", node.Type))
 }
 
-func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
+func (p *prettyprinter) VisitReturnStmt(node *ReturnStmt) {
   p.buf.WriteString("(return")
   p.indent++
 
@@ -301,7 +301,7 @@ func (p *Prettyprinter) VisitReturnStmt(node *ReturnStmt) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitIfStmt(node *IfStmt) {
+func (p *prettyprinter) VisitIfStmt(node *IfStmt) {
   p.buf.WriteString("(if\n")
   p.indent++
   
@@ -328,7 +328,7 @@ func (p *Prettyprinter) VisitIfStmt(node *IfStmt) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt) {
+func (p *prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt) {
   p.buf.WriteString("(for iterator\n")
   p.indent++
   p.doIndent()
@@ -346,7 +346,7 @@ func (p *Prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt) {
   p.buf.WriteString("\n")
 }
 
-func (p *Prettyprinter) VisitForStmt(node *ForStmt) {
+func (p *prettyprinter) VisitForStmt(node *ForStmt) {
   p.buf.WriteString("(for\n")
   p.indent++
 
@@ -374,7 +374,7 @@ func (p *Prettyprinter) VisitForStmt(node *ForStmt) {
   p.buf.WriteString(")")
 }
 
-func (p *Prettyprinter) VisitBlock(node *Block) {
+func (p *prettyprinter) VisitBlock(node *Block) {
   p.buf.WriteString("(block")
   p.indent++
 
@@ -389,7 +389,7 @@ func (p *Prettyprinter) VisitBlock(node *Block) {
 }
 
 func Prettyprint(root Node, indentSize int) string {
-  v := Prettyprinter{indentSize: indentSize}
+  v := prettyprinter{indentSize: indentSize}
   root.Accept(&v)
   return v.buf.String()
 }
