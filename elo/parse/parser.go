@@ -88,6 +88,20 @@ func (p *parser) checkIdList(list []ast.Node) bool {
   return true
 }
 
+// check if an expression list contains only assignable values
+func (p *parser) checkLhsList(list []ast.Node) bool {
+  for _, node := range list {
+    switch node.(type) {
+    case *ast.Id, *ast.Selector, *ast.Subscript:
+      continue
+    default:
+      return false
+    }
+  }
+
+  return true
+}
+
 func (p *parser) exprList(inArray bool) ([]ast.Node, error) {
   var list []ast.Node
   for {
@@ -571,10 +585,13 @@ func (p *parser) assignment() (ast.Node, error) {
   // ':='
   if p.tok == token.COLONEQ {
     // a short variable declaration
-    isIdList := p.checkIdList(left)
-
-    if !isIdList {
+    if isIdList := p.checkIdList(left); !isIdList {
       return nil, p.error("non-identifier at left side of ':='")
+    }
+  } else {
+    // validate left side of assignment
+    if !isLhsList := p.checkLhsList(left); isLhsList {
+      return nil, p.error("non-assignable at left side of '='")
     }
   }
 

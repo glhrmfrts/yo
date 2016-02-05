@@ -1,8 +1,0 @@
-fmt, os := import('fmt'), import('os')
-
-// there is really no 'main' function
-// and this is a comment
-func main() {
-	fmt.printf("Ratatat %s", 'N I C E \u00ff')
-	os.exit(1)
-}
