@@ -70,7 +70,7 @@ func (t *tokenizer) nextChar() bool {
 func (t *tokenizer) scanComment() bool {
   // initial '/' already consumed
   if t.r == '/' {
-    for t.r != '\n' {
+    for t.r != -1 && t.r != '\n' {
       t.nextChar()
     }
 

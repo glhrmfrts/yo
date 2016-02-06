@@ -5,7 +5,7 @@ package parse
 import (
 	"fmt"
 	"testing"
-  //"github.com/glhrmfrts/elo-lang/elo/ast"
+  "io/ioutil"
 )
 
 func TestExpr(t *testing.T) {
@@ -76,6 +76,27 @@ func TestExpr(t *testing.T) {
 			t.Errorf("(%d) error: %s\n%s\n", i, expr, err.Error())
 		} else {
 			fmt.Printf("(%d) ok: %s\n\n", i, expr)
+		}
+	}
+}
+
+func TestFiles(t *testing.T) {
+	valid := []string{
+		"variables.elo",
+	}
+
+	fmt.Println("TestFiles:")
+	for i, file := range valid {
+		source, err := ioutil.ReadFile("./../../tests/" + file)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = ParseFile(source, file)
+		if err != nil {
+			t.Errorf("(%d) error: %s\n%s\n", i, file, err.Error())
+		} else {
+			fmt.Printf("(%d) ok : %s\n\n", i, file)
 		}
 	}
 }
