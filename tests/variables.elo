@@ -32,5 +32,5 @@ c ^= c << 1
 a = b; c = 2
 
 // I think the parser should also reject this?
-call() = 2
-func() {} = 3
+// call() = 2
+// func() {} = 3

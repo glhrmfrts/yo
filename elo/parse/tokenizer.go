@@ -1,4 +1,4 @@
-// heavily inspired by Go's tokenizer :)
+// heavily inspired by Go's scanner :)
 
 package parse
 
@@ -7,7 +7,7 @@ import (
   "unicode/utf8"
   "os"
   "fmt"
-  "github.com/glhrmfrts/elo-lang/elo/token"
+  "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
 type tokenizer struct {
@@ -20,6 +20,7 @@ type tokenizer struct {
 }
 
 const bom = 0xFEFF // byte-order mark, only allowed as the first character
+const eof = -1
 
 func isLetter(ch rune) bool {
   return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
@@ -62,7 +63,7 @@ func (t *tokenizer) nextChar() bool {
     return true
   }
 
-  t.r = -1
+  t.r = eof
   t.offset = len(t.src)
   return false
 }
@@ -70,7 +71,7 @@ func (t *tokenizer) nextChar() bool {
 func (t *tokenizer) scanComment() bool {
   // initial '/' already consumed
   if t.r == '/' {
-    for t.r != -1 && t.r != '\n' {
+    for t.r != eof && t.r != '\n' {
       t.nextChar()
     }
 
@@ -97,7 +98,7 @@ func digitVal(ch rune) int {
   case 'A' <= ch && ch <= 'F':
     return int(ch - 'A' + 10)
   }
-  return 16 // larger than any legal digit val
+  return 16
 }
 
 func (t *tokenizer) scanMantissa(base int) {
@@ -106,13 +107,13 @@ func (t *tokenizer) scanMantissa(base int) {
   }
 }
 
-func (t *tokenizer) scanNumber(seenDecimalPoint bool) (token.Token, string) {
+func (t *tokenizer) scanNumber(seenDecimalPoint bool) (ast.Token, string) {
   // digitVal(t.r) < 10
   offs := t.offset
-  typ := token.INT
+  typ := ast.T_INT
 
   if seenDecimalPoint {
-    typ = token.FLOAT
+    typ = ast.T_FLOAT
     offs--
     t.scanMantissa(10)
     goto exponent
@@ -155,14 +156,14 @@ func (t *tokenizer) scanNumber(seenDecimalPoint bool) (token.Token, string) {
 
 fraction:
   if t.r == '.' {
-    typ = token.FLOAT
+    typ = ast.T_FLOAT
     t.nextChar()
     t.scanMantissa(10)
   }
 
 exponent:
   if t.r == 'e' || t.r == 'E' {
-    typ = token.FLOAT
+    typ = ast.T_FLOAT
     t.nextChar()
     if t.r == '-' || t.r == '+' {
       t.nextChar()
@@ -275,7 +276,7 @@ func (t *tokenizer) skipWhitespace() {
 // functions that look 1 or 2 characters ahead,
 // and return the given token types based on that
 
-func (t *tokenizer) maybe1(a token.Token, c1 rune, t1 token.Token) token.Token {
+func (t *tokenizer) maybe1(a ast.Token, c1 rune, t1 ast.Token) ast.Token {
   offset := t.readOffset
 
   t.nextChar()
@@ -287,7 +288,7 @@ func (t *tokenizer) maybe1(a token.Token, c1 rune, t1 token.Token) token.Token {
   return a
 }
 
-func (t *tokenizer) maybe2(a token.Token, c1 rune, t1 token.Token, c2 rune, t2 token.Token) token.Token {
+func (t *tokenizer) maybe2(a ast.Token, c1 rune, t1 ast.Token, c2 rune, t2 ast.Token) ast.Token {
   offset := t.readOffset
 
   t.nextChar()
@@ -304,22 +305,22 @@ func (t *tokenizer) maybe2(a token.Token, c1 rune, t1 token.Token, c2 rune, t2 t
 
 // does the actual scanning and return the type of the token
 // and a literal string representing it
-func (t *tokenizer) nextToken() (token.Token, string) {
+func (t *tokenizer) nextToken() (ast.Token, string) {
   t.skipWhitespace()
 
   switch ch := t.r; {
   case isLetter(t.r):
     lit := t.scanIdentifier()
-    kwtype, ok := token.Keyword(lit)
+    kwtype, ok := ast.Keyword(lit)
     if ok {
       return kwtype, lit
     }
-    return token.ID, lit
+    return ast.T_ID, lit
   case isDigit(t.r):
     return t.scanNumber(false)
   case t.r == '\'' || t.r == '"':
     t.nextChar()
-    return token.STRING, t.scanString(ch)
+    return ast.T_STRING, t.scanString(ch)
   default:
     if t.r == '/' {
       t.nextChar()
@@ -329,36 +330,36 @@ func (t *tokenizer) nextToken() (token.Token, string) {
 
       if t.r == '=' {
         t.nextChar()
-        return token.DIVEQ, "/="
+        return ast.T_DIVEQ, "/="
       }
-      return token.DIV, "/"
+      return ast.T_DIV, "/"
     }
 
-    tok := token.Token(-1)
+    tok := ast.Token(-1)
     offs := t.offset
 
     switch t.r {
-    case '\n': tok = token.NEWLINE
-    case '+': tok = t.maybe1(token.PLUS, '=', token.PLUSEQ)
-    case '-': tok = t.maybe1(token.MINUS, '=', token.MINUSEQ)
-    case '*': tok = t.maybe2(token.TIMES, '=', token.TIMESEQ, '*', token.TIMESTIMES)
-    case '&': tok = t.maybe2(token.AMP, '=', token.AMPEQ, '&', token.AMPAMP)
-    case '|': tok = t.maybe2(token.PIPE, '=', token.PIPEEQ, '|', token.PIPEPIPE)
-    case '^': tok = t.maybe1(token.TILDE, '=', token.TILDEEQ)
-    case '<': tok = t.maybe2(token.LT, '=', token.LTEQ, '<', token.LTLT)
-    case '>': tok = t.maybe2(token.GT, '=', token.GTEQ, '>', token.GTGT)
-    case '=': tok = t.maybe2(token.EQ, '=', token.EQEQ, '>', token.EQGT)
-    case ':': tok = t.maybe1(token.COLON, '=', token.COLONEQ)
-    case ';': tok = token.SEMICOLON
-    case ',': tok = token.COMMA
-    case '!': tok = t.maybe1(token.BANG, '=', token.BANGEQ)
-    case '?': tok = token.QUESTION
-    case '(': tok = token.LPAREN
-    case ')': tok = token.RPAREN
-    case '[': tok = token.LBRACK
-    case ']': tok = token.RBRACK
-    case '{': tok = token.LBRACE
-    case '}': tok = token.RBRACE
+    case '\n': tok = ast.T_NEWLINE
+    case '+': tok = t.maybe1(ast.T_PLUS, '=', ast.T_PLUSEQ)
+    case '-': tok = t.maybe1(ast.T_MINUS, '=', ast.T_MINUSEQ)
+    case '*': tok = t.maybe2(ast.T_TIMES, '=', ast.T_TIMESEQ, '*', ast.T_TIMESTIMES)
+    case '&': tok = t.maybe2(ast.T_AMP, '=', ast.T_AMPEQ, '&', ast.T_AMPAMP)
+    case '|': tok = t.maybe2(ast.T_PIPE, '=', ast.T_PIPEEQ, '|', ast.T_PIPEPIPE)
+    case '^': tok = t.maybe1(ast.T_TILDE, '=', ast.T_TILDEEQ)
+    case '<': tok = t.maybe2(ast.T_LT, '=', ast.T_LTEQ, '<', ast.T_LTLT)
+    case '>': tok = t.maybe2(ast.T_GT, '=', ast.T_GTEQ, '>', ast.T_GTGT)
+    case '=': tok = t.maybe2(ast.T_EQ, '=', ast.T_EQEQ, '>', ast.T_EQGT)
+    case ':': tok = t.maybe1(ast.T_COLON, '=', ast.T_COLONEQ)
+    case ';': tok = ast.T_SEMICOLON
+    case ',': tok = ast.T_COMMA
+    case '!': tok = t.maybe1(ast.T_BANG, '=', ast.T_BANGEQ)
+    case '?': tok = ast.T_QUESTION
+    case '(': tok = ast.T_LPAREN
+    case ')': tok = ast.T_RPAREN
+    case '[': tok = ast.T_LBRACK
+    case ']': tok = ast.T_RBRACK
+    case '{': tok = ast.T_LBRACE
+    case '}': tok = ast.T_RBRACE
     case '.':
       t.nextChar()
       if isDigit(t.r) {
@@ -367,25 +368,25 @@ func (t *tokenizer) nextToken() (token.Token, string) {
         t.nextChar()
         if t.r == '.' {
           t.nextChar()
-          return token.DOTDOTDOT, "..."
+          return ast.T_DOTDOTDOT, "..."
         }
       } else {
-        return token.DOT, "."
+        return ast.T_DOT, "."
       }
     }
 
-    if tok != -1 {
+    if tok != eof {
       t.nextChar()
       return tok, string(t.src[offs:t.offset])
     }
   }
 
   if t.offset >= len(t.src) {
-    return token.EOS, "end"
+    return ast.T_EOS, "end"
   }
 
   fmt.Print(string(t.r))
-  return token.ILLEGAL, ""
+  return ast.T_ILLEGAL, ""
 }
 
 func (t *tokenizer) init(source []byte, filename string) {

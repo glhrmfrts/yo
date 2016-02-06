@@ -1,6 +1,6 @@
 package parse
 
-// TODO: test files with lots of code
+// TODO: add invalid tests expecting errors
 
 import (
 	"fmt"

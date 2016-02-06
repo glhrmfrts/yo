@@ -3,7 +3,6 @@
 package ast
 
 import (
-  "github.com/glhrmfrts/elo-lang/elo/token"
 )
 
 type (
@@ -11,90 +10,112 @@ type (
     Accept(v Visitor)
   }
 
+  NodeInfo struct {
+    Line int
+  }
+
   //
   // expressions
   //
 
-  Nil struct {  
+  Nil struct {
+    NodeInfo 
   }
 
   Bool struct {
+    NodeInfo
     Value bool
   }
 
   Number struct {
-    Type  token.Token // int or float
+    NodeInfo
+    Type  Token // int or float
     Value string
   }
 
   Id struct {
+    NodeInfo
     Value string
   }
 
   String struct {
+    NodeInfo
     Value string
   }
 
   Array struct {
+    NodeInfo
     Values []Node
   }
 
   ObjectField struct {
+    NodeInfo
     Key   Node
     Value Node
   }
 
   Object struct {
+    NodeInfo
     Fields []*ObjectField
   }
 
   Function struct {
+    NodeInfo
     Name Node
     Args []Node
     Body Node
   }
 
   Selector struct {
+    NodeInfo
     Left  Node
     Value string
   }
 
   Subscript struct {
+    NodeInfo
     Left  Node
     Right Node
   }
 
   Slice struct {
+    NodeInfo
     Start Node
     End   Node
   }
 
   KwArg struct {
+    NodeInfo
     Key   string
     Value Node
   }
 
   VarArg struct {
+    NodeInfo
     Arg Node
   }
 
   CallExpr struct {
+    NodeInfo
     Left  Node
     Args  []Node
   }
 
   UnaryExpr struct {
-    Op    token.Token
+    NodeInfo
+    Op    Token
     Right Node
   }
 
   BinaryExpr struct {
-    Op    token.Token
+    NodeInfo
+    Op    Token
     Left  Node
     Right Node
   }
 
   TernaryExpr struct {
+    NodeInfo
     Cond Node
     Then Node
     Else Node
@@ -105,26 +126,31 @@ type (
   // 
 
   Declaration struct {
+    NodeInfo
     IsConst bool
     Left    []*Id
     Right   []Node
   }
 
   Assignment struct {
-    Op    token.Token
+    NodeInfo
+    Op    Token
     Left  []Node
     Right []Node
   }
 
   BranchStmt struct {
-    Type token.Token // BREAK, CONTINUE or FALLTHROUGH
+    NodeInfo
+    Type Token // BREAK, CONTINUE or FALLTHROUGH
   }
 
   ReturnStmt struct {
+    NodeInfo
     Values []Node
   }
 
   IfStmt struct {
+    NodeInfo
     Init *Assignment
     Cond Node
     Body Node
@@ -132,12 +158,14 @@ type (
   }
 
   ForIteratorStmt struct {
+    NodeInfo
     Iterator   *Id
     Collection Node
     Body       Node
   }
 
   ForStmt struct {
+    NodeInfo
     Init *Assignment
     Cond Node
     Step Node
@@ -145,6 +173,7 @@ type (
   }
 
   Block struct {
+    NodeInfo
     Nodes []Node
   }
 )
