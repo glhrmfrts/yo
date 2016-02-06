@@ -234,6 +234,31 @@ func (p *prettyprinter) VisitBinaryExpr(node *BinaryExpr) {
   p.buf.WriteString(")")
 }
 
+func (p *prettyprinter) VisitTernaryExpr(node *TernaryExpr) {
+  p.buf.WriteString("(ternary\n")
+  p.indent++
+  p.doIndent()
+
+  node.Cond.Accept(p)
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+  p.buf.WriteString("?\n")
+  p.doIndent()
+
+  node.Then.Accept(p)
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+  p.buf.WriteString(":\n")
+  p.doIndent()
+
+  node.Else.Accept(p)
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *prettyprinter) VisitDeclaration(node *Declaration) {
   keyword := "var"
   if node.IsConst {
@@ -248,6 +273,10 @@ func (p *prettyprinter) VisitDeclaration(node *Declaration) {
     p.doIndent()
     id.Accept(p)
   }
+
+  p.buf.WriteString("\n")
+  p.doIndent()
+  p.buf.WriteString("=")
 
   for _, node := range node.Right {
     p.buf.WriteString("\n")

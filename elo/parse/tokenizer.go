@@ -352,6 +352,7 @@ func (t *tokenizer) nextToken() (token.Token, string) {
     case ';': tok = token.SEMICOLON
     case ',': tok = token.COMMA
     case '!': tok = t.maybe1(token.BANG, '=', token.BANGEQ)
+    case '?': tok = token.QUESTION
     case '(': tok = token.LPAREN
     case ')': tok = token.RPAREN
     case '[': tok = token.LBRACK

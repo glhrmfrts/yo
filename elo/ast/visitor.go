@@ -23,6 +23,7 @@ type Visitor interface {
   VisitCallExpr(node *CallExpr)
   VisitUnaryExpr(node *UnaryExpr)
   VisitBinaryExpr(node *BinaryExpr)
+  VisitTernaryExpr(node *TernaryExpr)
   VisitDeclaration(node *Declaration)
   VisitAssignment(node *Assignment)
   VisitBranchStmt(node *BranchStmt)

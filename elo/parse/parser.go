@@ -539,13 +539,39 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) (ast.Node, error) 
   return left, nil
 }
 
+func (p *parser) ternaryExpr(left ast.Node) (ast.Node, error) {
+  p.next() // '?'
+
+  whenTrue, err := p.expr()
+  if err != nil {
+    return nil, err
+  }
+  if !p.accept(token.COLON) {
+    return nil, p.errorExpected("':'")
+  }
+  whenFalse, err := p.expr()
+  if err != nil {
+    return nil, err
+  }
+  return &ast.TernaryExpr{Cond: left, Then: whenTrue, Else: whenFalse}, nil
+}
+
 func (p *parser) expr() (ast.Node, error) {
   left, err := p.unaryExpr()
   if err != nil {
     return nil, err
   }
+  left, err = p.binaryExpr(left, 0)
+  if err != nil {
+    return nil,err
+  }
 
-  return p.binaryExpr(left, 0)
+  // avoid unecessary calls to ternaryExpr
+  if p.tok == token.QUESTION {
+    return p.ternaryExpr(left)
+  }
+
+  return left, nil
 }
 
 func (p *parser) declaration() (ast.Node, error) {
@@ -590,7 +616,7 @@ func (p *parser) assignment() (ast.Node, error) {
     }
   } else {
     // validate left side of assignment
-    if !isLhsList := p.checkLhsList(left); isLhsList {
+    if isLhsList := p.checkLhsList(left); !isLhsList {
       return nil, p.error("non-assignable at left side of '='")
     }
   }

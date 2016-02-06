@@ -64,6 +64,9 @@ func TestExpr(t *testing.T) {
 		"5 > 2",
 		"a <= b * 2 / 3 * (4 ** 4)",
 		"5 ** 5",
+		"true ? 'is true' : 'is false'",
+		"true ? 'is true' : true ? 'is still true' : 'is false'",
+		"(98 < 100 ? 1 : 0) ? 'lt' : 'gt'",
 	}
 
 	fmt.Println("TestExpr:")

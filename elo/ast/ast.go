@@ -11,6 +11,10 @@ type (
     Accept(v Visitor)
   }
 
+  //
+  // expressions
+  //
+
   Nil struct {  
   }
 
@@ -89,6 +93,16 @@ type (
     Left  Node
     Right Node
   }
+
+  TernaryExpr struct {
+    Cond Node
+    Then Node
+    Else Node
+  }
+
+  //
+  // statements
+  // 
 
   Declaration struct {
     IsConst bool
@@ -198,6 +212,10 @@ func (node *CallExpr) Accept(v Visitor) {
 
 func (node *UnaryExpr) Accept(v Visitor) {
   v.VisitUnaryExpr(node)
+}
+
+func (node *TernaryExpr) Accept(v Visitor) {
+  v.VisitTernaryExpr(node)
 }
 
 func (node *BinaryExpr) Accept(v Visitor) {

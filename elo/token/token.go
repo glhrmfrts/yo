@@ -76,6 +76,7 @@ const (
   DOT
   DOTDOTDOT
   BANG
+  QUESTION
   LPAREN
   RPAREN
   LBRACK
