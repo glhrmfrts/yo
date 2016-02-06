@@ -14,14 +14,14 @@ type parser struct {
 }
 
 type ParseError struct {
-  guilty    ast.Token
-  line      int
-  file      string
-  message   string
+  Guilty    ast.Token
+  Line      int
+  File      string
+  Message   string
 }
 
 func (err *ParseError) Error() string {
-  return fmt.Sprintf("%s:%d: syntax error: %s", err.file, err.line, err.message)
+  return fmt.Sprintf("%s:%d: syntax error: %s", err.File, err.Line, err.Message)
 }
 
 //
@@ -30,7 +30,7 @@ func (err *ParseError) Error() string {
 
 func (p *parser) error(msg string) {
   t := p.tokenizer
-  panic(&ParseError{guilty: p.tok, line: t.lineno, file: t.filename, message: msg})
+  panic(&ParseError{Guilty: p.tok, Line: t.lineno, File: t.filename, Message: msg})
 }
 
 func (p *parser) errorExpected(expected string) {
@@ -91,13 +91,20 @@ func (p *parser) checkIdList(list []ast.Node) bool {
   return true
 }
 
-// check if an expression list contains only assignable values
+// check if an expression can be at left side of an assignment
+func (p *parser) checkLhs(node ast.Node) bool {
+  switch node.(type) {
+  case *ast.Id, *ast.Selector, *ast.Subscript:
+    return true
+  default:
+    return false
+  }
+}
+
+// same as above but with a list of expressions
 func (p *parser) checkLhsList(list []ast.Node) bool {
   for _, node := range list {
-    switch node.(type) {
-    case *ast.Id, *ast.Selector, *ast.Subscript:
-      continue
-    default:
+    if !p.checkLhs(node) {
       return false
     }
   }
@@ -245,6 +252,7 @@ func (p *parser) functionBody() ast.Node {
     args := p.functionArgs()
     body := p.functionBody()
     fn := &ast.Function{Args: args, Body: body, NodeInfo: ast.NodeInfo{line}}
+
     return &ast.Block{
       Nodes: []ast.Node{ &ast.ReturnStmt{Values: []ast.Node{fn}, NodeInfo: ast.NodeInfo{line}} },
       NodeInfo: ast.NodeInfo{line},
@@ -270,15 +278,9 @@ func (p *parser) function() ast.Node {
   line := p.line()
   p.next() // 'func'
 
-  var name ast.Node
-  if p.tok == ast.T_ID {
-    name = ast.Node(p.makeId())
-    p.next()
-
-    if p.accept(ast.T_DOT) && p.tok == ast.T_ID {
-      name = ast.Node(p.makeSelector(name))
-      p.next()
-    }
+  name := p.selectorOrSubscriptExpr(nil)
+  if !p.checkLhs(name) {
+    p.error("function name must be assignable")
   }
 
   args := p.functionArgs()
@@ -318,7 +320,7 @@ func (p *parser) primaryExpr() ast.Node {
     case ast.T_TRUE, ast.T_FALSE:
       return &ast.Bool{Value: p.tok == ast.T_TRUE, NodeInfo: ast.NodeInfo{line}}
     case ast.T_NIL:
-      return &ast.Nil{}
+      return &ast.Nil{NodeInfo: ast.NodeInfo{line}}
     }
   }
 

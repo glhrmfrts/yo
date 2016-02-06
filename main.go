@@ -6,6 +6,7 @@ import (
   "io/ioutil"
 	"github.com/glhrmfrts/elo-lang/elo/parse"
   "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/elo/vm"
 )
 
 func main() {
@@ -23,4 +24,12 @@ func main() {
 
   out := ast.Prettyprint(root, 2)
   fmt.Println(out)
+
+  code, err := vm.Compile(root, filename)
+  if err != nil {
+    fmt.Println(err.Error())
+    return
+  }
+
+  fmt.Println(code)
 }
