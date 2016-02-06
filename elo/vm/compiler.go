@@ -1,6 +1,7 @@
 package vm
 
 type compiler struct {
+  filename string
 }
 
 //
@@ -105,4 +106,10 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt) {
 
 func (c *compiler) VisitBlock(node *ast.Block) {
 
+}
+
+func Compile(root ast.Node, filename string) {
+  var c compiler
+  c.filename = filename
+  root.Accept(c)
 }
