@@ -16,23 +16,14 @@ type FuncProto struct {
   Consts    []Value
   Code      []uint32
   Lines     []LineInfo
-
-  // information used only in compile-time
-  lastLine  int
 }
+
+const (
+  funcMaxConsts = 0xffff
+)
 
 func newFuncProto(source string) *FuncProto {
   return &FuncProto{
     Source: source,
-  }
-}
-
-func (f *FuncProto) addInstruction(instr uint32, line int) {
-  f.Code = append(f.Code, instr)
-  f.NumCode++
-
-  if line != f.lastLine {
-    f.Lines = append(f.Lines, LineInfo{f.NumCode - 1, uint16(line)})
-    f.lastLine = line
   }
 }

@@ -2,6 +2,7 @@ package vm
 
 import (
   "fmt"
+  "strconv"
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
@@ -26,6 +27,7 @@ type (
   }
 
   compiler struct {
+    lastLine int
     filename string
     mainFunc *FuncProto
     block    *compilerblock
@@ -43,28 +45,59 @@ func newCompilerBlock(proto *FuncProto) *compilerblock {
   }
 }
 
-func (b *compilerblock) genRegisterId() int {
-  id := b.registerId
-  b.registerId++
-  return id
+
+func (c *compiler) error(line int, msg string) {
+  panic(&CompileError{Line: line, File: c.filename, Message: msg})
 }
 
+func (c *compiler) emitInstruction(instr uint32, line int) {
+  f := c.block.proto
+  f.Code = append(f.Code, instr)
+  f.NumCode++
 
-func (c *compiler) error(msg string) {
-  panic(&CompileError{Line: c.line, File: c.filename, Message: msg})
+  if line != c.lastLine {
+    f.Lines = append(f.Lines, LineInfo{f.NumCode - 1, uint16(line)})
+    c.lastLine = line
+  }
 }
 
 func (c *compiler) emitAB(op Opcode, a, b int, line int) {
-  c.block.proto.addInstruction(opNewAB(op, a, b), line)
+  c.emitInstruction(opNewAB(op, a, b), line)
 }
 
-// visitor interface functions
+func (c *compiler) genRegisterId() int {
+  id := c.block.registerId
+  c.block.registerId++
+  fmt.Printf("genRegisterId: %d\n", id)
+  return id
+}
+
+// Add a constant to the current prototype's constant pool
+// and return it's index
+func (c *compiler) addConst(value Value) int {
+  f := c.block.proto
+  valueType := value.Type()
+  for i, c := range f.Consts {
+    if c.Type() == valueType && c == value {
+      return i
+    }
+  }
+  if f.NumConsts > funcMaxConsts - 1 {
+    c.error(0, "too many constants") // should never happen
+  }
+  f.Consts = append(f.Consts, value)
+  f.NumConsts++
+  return int(f.NumConsts - 1)
+}
 
 func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   var rega, regb int
   expr, ok := data.(*exprdata)
   if ok {
     rega, regb = expr.rega, expr.regb
+  } else {
+    rega = c.genRegisterId()
+    regb = rega
   }
   c.emitAB(OP_LOADNIL, rega, regb, node.NodeInfo.Line)
 }
@@ -73,7 +106,7 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
   var reg, value int
   expr, ok := data.(*exprdata)
   if !ok {
-    reg = c.block.genRegisterId()
+    reg = c.genRegisterId()
   } else {
     reg = expr.rega
   }
@@ -84,14 +117,44 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
 }
 
 func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
-
-}
-
-func (c *compiler) VisitId(node *ast.Id, data interface{}) {
-
+  var reg int
+  var value Value
+  expr, ok := data.(*exprdata)
+  if !ok {
+    reg = c.genRegisterId()
+  } else {
+    reg = expr.rega
+  }
+  if node.Type == ast.T_FLOAT {
+    f, err := strconv.ParseFloat(node.Value, 64)
+    if err != nil {
+      panic(err)
+    }
+    value = Number(f)
+  } else {
+    i, err := strconv.Atoi(node.Value)
+    if err != nil {
+      panic(err)
+    }
+    value = Number(float64(i))
+  }
+  c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitString(node *ast.String, data interface{}) {
+  var reg int
+  var value Value
+  expr, ok := data.(*exprdata)
+  if !ok {
+    reg = c.genRegisterId()
+  } else {
+    reg = expr.rega
+  }
+  value = String(node.Value)
+  c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+}
+
+func (c *compiler) VisitId(node *ast.Id, data interface{}) {
 
 }
 
