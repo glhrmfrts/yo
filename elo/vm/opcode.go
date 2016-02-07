@@ -4,8 +4,15 @@ type Opcode int
 
 const (
   OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) to nil
-  OP_LOADBOOL               // set R(A) to true if R(B) != 0 else false
-  OP_LOADCONST              // set R(A) to K(Bxx)
+  OP_LOADCONST              // set R(A) to K(Bx)
+
+  OP_NEGATE                 // set R(A) to -RK(Bx)
+  OP_NOT                    // set R(A) to NOT RK(Bx)
+)
+
+const (
+  // offset for RK
+  kConstOffset = 250
 )
 
 var (
@@ -49,6 +56,10 @@ func opNewABC(op Opcode, a, b, c int) uint32 {
   return uint32(((c & 0xff) << 24) | ((b & 0xff) << 16) | ((a & 0xff) << 8) | (int(op) & 0xff))
 }
 
+func opNewABx(op Opcode, a, b int) uint32 {
+  return uint32(((b & 0xffff) << 16) | ((a & 0xff) << 8) | (int(op) & 0xff))
+}
+
 func opGetOpcode(instr uint32) Opcode {
   return Opcode(instr & 0xff)
 }
@@ -63,4 +74,8 @@ func opGetB(instr uint32) int {
 
 func opGetC(instr uint32) int {
   return int((instr >> 24) & 0xff)
+}
+
+func opGetBx(instr uint32) int {
+  return int((instr >> 16) & 0xffff)
 }

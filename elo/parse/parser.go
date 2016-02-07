@@ -3,6 +3,7 @@ package parse
 
 import (
   "fmt"
+  "strconv"
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
@@ -328,7 +329,7 @@ func (p *parser) primaryExpr() ast.Node {
     defer p.next()
     switch p.tok {
     case ast.T_INT, ast.T_FLOAT:
-      return &ast.Number{Type: p.tok, Value: parseNumber(p.literal), NodeInfo: ast.NodeInfo{line}}
+      return &ast.Number{Value: parseNumber(p.tok, p.literal), NodeInfo: ast.NodeInfo{line}}
     case ast.T_ID:
       return &ast.Id{Value: p.literal, NodeInfo: ast.NodeInfo{line}}
     case ast.T_STRING:

@@ -2,7 +2,6 @@ package vm
 
 import (
   "fmt"
-  "strconv"
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
@@ -16,8 +15,8 @@ type (
   // holds registers for a expression
   exprdata struct {
     propagate bool
-    rega      int // rega is default for read
-    regb      int // regb is default for write
+    rega      int // rega is default for write
+    regb      int // regb is default for read
   }
 
   // lexical scope of a name
@@ -35,9 +34,11 @@ type (
 
   // lexical block structure for compiler
   compilerblock struct {
+    context    blockcontext
     registerId int
-    names      map[string]nameinfo
+    names      map[string]*nameinfo
     proto      *FuncProto
+    parent     *compilerblock
   }
 
   compiler struct {
@@ -87,8 +88,12 @@ func (c *compiler) emitInstruction(instr uint32, line int) {
   }
 }
 
-func (c *compiler) emitAB(op Opcode, a, b int, line int) {
+func (c *compiler) emitAB(op Opcode, a, b, line int) {
   c.emitInstruction(opNewAB(op, a, b), line)
+}
+
+func (c *compiler) emitABx(op Opcode, a, b, line int) {
+  c.emitInstruction(opNewABx(op, a, b), line)
 }
 
 func (c *compiler) genRegisterId() int {
@@ -144,22 +149,28 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
     if t.Op == ast.T_MINUS {
       num, ok := t.Right.(*ast.Number)
       if ok {
-        return Number(-parseNumber(num.Value)), true
+        return Number(-num.Value), true
       } else {
         val, ok := c.constFold(t.Right)
         if ok {
-          return -val, true
+          f64, ok := val.assertFloat64()
+          if ok {
+            return Number(-f64), true
+          }
         }
         return nil, false
       }
     } else {
       b, ok := t.Right.(*ast.Bool)
       if ok {
-        return Bool(!b.Value)
+        return Bool(!b.Value), true
       } else {
         val, ok := c.constFold(t.Right)
         if ok {
-          return Bool(!bool(val)), true
+          bool_, ok := val.assertBool()
+          if ok {
+            return Bool(!bool_), true
+          }
         }
         return nil, false
       }
@@ -181,17 +192,18 @@ func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
 }
 
 func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
-  var reg, value int
+  var reg int
+  value := Bool(node.Value)
   expr, ok := data.(*exprdata)
-  if !ok {
-    reg = c.genRegisterId()
-  } else {
+  if ok && expr.propagate {
+    expr.regb = kConstOffset + c.addConst(value)
+    return
+  } else if ok {
     reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
   }
-  if node.Value {
-    value = 1
-  }
-  c.emitAB(OP_LOADBOOL, reg, value, node.NodeInfo.Line)
+  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
@@ -206,7 +218,7 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
   } else {
     reg = c.genRegisterId()
   }
-  c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitString(node *ast.String, data interface{}) {
@@ -219,11 +231,11 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
     reg = expr.rega
   }
   value = String(node.Value)
-  c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitId(node *ast.Id, data interface{}) {
-  var reg int
+  /*var reg int
   expr, ok := data.(*exprdata)
   if !ok {
     reg = c.genRegisterId()
@@ -239,7 +251,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
     break
   case kScopeGlobal:
     c.emitAB(OP_LOADGLOBAL, reg, c.addConst(node.Value), node.NodeInfo.Line)
-  }
+  }*/
 }
 
 func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
@@ -291,10 +303,10 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
       expr.regb = kConstOffset + c.addConst(value)
       return
     }
-    c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+    c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
   } else {
     if exprok {
-      reg = expr.dstreg
+      reg = expr.rega
     } else {
       reg = c.genRegisterId()
     }
@@ -305,9 +317,9 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     case ast.T_NOT, ast.T_BANG:
       op = OP_NOT
     }
-    exprdata := exprdata{true}
+    exprdata := exprdata{true, 0, 0}
     node.Right.Accept(c, &exprdata)
-    c.emitAB(op, reg, exprdata.regb, node.NodeInfo.Line)
+    c.emitABx(op, reg, exprdata.regb, node.NodeInfo.Line)
   }
 }
 

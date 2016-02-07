@@ -1,0 +1,6 @@
+// test constant folding
+
+!false
+!true;
+-2;
+-(-(5))

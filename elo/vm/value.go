@@ -14,6 +14,8 @@ type (
     // manual type retrieval seems to be faster than
     // go's interface type assertion
     Type() ValueType
+    assertFloat64() (float64, bool)
+    assertBool() (bool, bool)
   }
 
   // Nil is just an empty struct
@@ -30,18 +32,18 @@ type (
 )
 
 
-func (v Nil) Type() ValueType {
-  return VALUE_NIL
-}
+func (v Nil) Type() ValueType                { return VALUE_NIL }
+func (v Nil) assertFloat64() (float64, bool) { return 0, false }
+func (v Nil) assertBool() (bool, bool)       { return false, false }
 
-func (v Bool) Type() ValueType {
-  return VALUE_STRING
-}
+func (v Bool) Type() ValueType                { return VALUE_STRING }
+func (v Bool) assertFloat64() (float64, bool) { return 0, false }
+func (v Bool) assertBool() (bool, bool)       { return bool(v), true }
 
-func (v Number) Type() ValueType {
-  return VALUE_NUMBER
-}
+func (v Number) Type() ValueType                { return VALUE_NUMBER }
+func (v Number) assertFloat64() (float64, bool) { return float64(v), true }
+func (v Number) assertBool() (bool, bool)       { return false, false }
 
-func (v String) Type() ValueType {
-  return VALUE_STRING
-}
+func (v String) Type() ValueType                { return VALUE_STRING }
+func (v String) assertFloat64() (float64, bool) { return 0, false }
+func (v String) assertBool() (bool, bool)       { return false, false }
