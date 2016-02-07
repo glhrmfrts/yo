@@ -3,7 +3,7 @@ package vm
 type Opcode int
 
 const (
-  OP_LOADNIL Opcode = iota  // set range R(A) .. R(B) to nil
+  OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) to nil
   OP_LOADBOOL               // set R(A) to true if R(B) != 0 else false
   OP_LOADCONST              // set R(A) to K(Bxx)
 )

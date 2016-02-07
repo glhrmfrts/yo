@@ -7,7 +7,7 @@ import (
 
 type (
   Node interface {
-    Accept(v Visitor)
+    Accept(v Visitor, data interface{})
   }
 
   NodeInfo struct {
@@ -179,106 +179,106 @@ type (
 )
 
 
-func (node *Nil) Accept(v Visitor) {
-  v.VisitNil(node)
+func (node *Nil) Accept(v Visitor, data interface{}) {
+  v.VisitNil(node, data)
 }
 
-func (node *Bool) Accept(v Visitor) {
-  v.VisitBool(node)
+func (node *Bool) Accept(v Visitor, data interface{}) {
+  v.VisitBool(node, data)
 }
 
-func (node *Number) Accept(v Visitor) {
-  v.VisitNumber(node)
+func (node *Number) Accept(v Visitor, data interface{}) {
+  v.VisitNumber(node, data)
 }
 
-func (node *Id) Accept(v Visitor) {
-  v.VisitId(node)
+func (node *Id) Accept(v Visitor, data interface{}) {
+  v.VisitId(node, data)
 }
 
-func (node *String) Accept(v Visitor) {
-  v.VisitString(node)
+func (node *String) Accept(v Visitor, data interface{}) {
+  v.VisitString(node, data)
 }
 
-func (node *Array) Accept(v Visitor) {
-  v.VisitArray(node)
+func (node *Array) Accept(v Visitor, data interface{}) {
+  v.VisitArray(node, data)
 }
 
-func (node *ObjectField) Accept(v Visitor) {
-  v.VisitObjectField(node)
+func (node *ObjectField) Accept(v Visitor, data interface{}) {
+  v.VisitObjectField(node, data)
 }
 
-func (node *Object) Accept(v Visitor) {
-  v.VisitObject(node)
+func (node *Object) Accept(v Visitor, data interface{}) {
+  v.VisitObject(node, data)
 }
 
-func (node *Function) Accept(v Visitor) {
-  v.VisitFunction(node)
+func (node *Function) Accept(v Visitor, data interface{}) {
+  v.VisitFunction(node, data)
 }
 
-func (node *Selector) Accept(v Visitor) {
-  v.VisitSelector(node)
+func (node *Selector) Accept(v Visitor, data interface{}) {
+  v.VisitSelector(node, data)
 }
 
-func (node *Subscript) Accept(v Visitor) {
-  v.VisitSubscript(node)
+func (node *Subscript) Accept(v Visitor, data interface{}) {
+  v.VisitSubscript(node, data)
 }
 
-func (node *Slice) Accept(v Visitor) {
-  v.VisitSlice(node)
+func (node *Slice) Accept(v Visitor, data interface{}) {
+  v.VisitSlice(node, data)
 }
 
-func (node *KwArg) Accept(v Visitor) {
-  v.VisitKwArg(node)
+func (node *KwArg) Accept(v Visitor, data interface{}) {
+  v.VisitKwArg(node, data)
 }
 
-func (node *VarArg) Accept(v Visitor) {
-  v.VisitVarArg(node)
+func (node *VarArg) Accept(v Visitor, data interface{}) {
+  v.VisitVarArg(node, data)
 }
 
-func (node *CallExpr) Accept(v Visitor) {
-  v.VisitCallExpr(node)
+func (node *CallExpr) Accept(v Visitor, data interface{}) {
+  v.VisitCallExpr(node, data)
 }
 
-func (node *UnaryExpr) Accept(v Visitor) {
-  v.VisitUnaryExpr(node)
+func (node *UnaryExpr) Accept(v Visitor, data interface{}) {
+  v.VisitUnaryExpr(node, data)
 }
 
-func (node *TernaryExpr) Accept(v Visitor) {
-  v.VisitTernaryExpr(node)
+func (node *TernaryExpr) Accept(v Visitor, data interface{}) {
+  v.VisitTernaryExpr(node, data)
 }
 
-func (node *BinaryExpr) Accept(v Visitor) {
-  v.VisitBinaryExpr(node)
+func (node *BinaryExpr) Accept(v Visitor, data interface{}) {
+  v.VisitBinaryExpr(node, data)
 }
 
-func (node *Declaration) Accept(v Visitor) {
-  v.VisitDeclaration(node)
+func (node *Declaration) Accept(v Visitor, data interface{}) {
+  v.VisitDeclaration(node, data)
 }
 
-func (node *Assignment) Accept(v Visitor) {
-  v.VisitAssignment(node)
+func (node *Assignment) Accept(v Visitor, data interface{}) {
+  v.VisitAssignment(node, data)
 }
 
-func (node *BranchStmt) Accept(v Visitor) {
-  v.VisitBranchStmt(node)
+func (node *BranchStmt) Accept(v Visitor, data interface{}) {
+  v.VisitBranchStmt(node, data)
 }
 
-func (node *ReturnStmt) Accept(v Visitor) {
-  v.VisitReturnStmt(node)
+func (node *ReturnStmt) Accept(v Visitor, data interface{}) {
+  v.VisitReturnStmt(node, data)
 }
 
-func (node *IfStmt) Accept(v Visitor) {
-  v.VisitIfStmt(node)
+func (node *IfStmt) Accept(v Visitor, data interface{}) {
+  v.VisitIfStmt(node, data)
 }
 
-func (node *ForIteratorStmt) Accept(v Visitor) {
-  v.VisitForIteratorStmt(node)
+func (node *ForIteratorStmt) Accept(v Visitor, data interface{}) {
+  v.VisitForIteratorStmt(node, data)
 }
 
-func (node *ForStmt) Accept(v Visitor) {
-  v.VisitForStmt(node)
+func (node *ForStmt) Accept(v Visitor, data interface{}) {
+  v.VisitForStmt(node, data)
 }
 
-func (node *Block) Accept(v Visitor) {
-  v.VisitBlock(node)
+func (node *Block) Accept(v Visitor, data interface{}) {
+  v.VisitBlock(node, data)
 }

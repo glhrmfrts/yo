@@ -5,29 +5,32 @@ import (
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
-type CompileError struct {
-  Line    int
-  File    string
-  Message string
-}
+type (
+  CompileError struct {
+    Line    int
+    File    string
+    Message string
+  }
 
-type symboltable map[string]int
+  // holds registers for a expression
+  exprdata struct {
+    rega int
+    regb int
+  }
 
+  // lexical block structure for compiler
+  compilerblock struct {
+    registerId int
+    names      map[string]int
+    proto      *FuncProto
+  }
 
-// lexical block structure for compiler
-type compilerblock struct {
-  registerId int
-  names      symboltable
-  proto      *FuncProto
-}
-
-type compiler struct {
-  line     int
-  filename string
-  mainFunc *FuncProto
-  block    *compilerblock
-}
-
+  compiler struct {
+    filename string
+    mainFunc *FuncProto
+    block    *compilerblock
+  }
+)
 
 func (err *CompileError) Error() string {
   return fmt.Sprintf("%s:%d: error: %s", err.File, err.Line, err.Message)
@@ -52,114 +55,127 @@ func (c *compiler) error(msg string) {
 }
 
 func (c *compiler) emitAB(op Opcode, a, b int, line int) {
-  c.block.proto.AddInstruction(opNewAB(op, a, b), line)
+  c.block.proto.addInstruction(opNewAB(op, a, b), line)
 }
 
 // visitor interface functions
 
-func (c *compiler) VisitNil(node *ast.Nil) {
-  // load nil to register
-  reg := c.block.genRegisterId()
-  c.emitAB(OP_LOADNIL, reg, 0, node.NodeInfo.Line)
+func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
+  var rega, regb int
+  expr, ok := data.(*exprdata)
+  if ok {
+    rega, regb = expr.rega, expr.regb
+  }
+  c.emitAB(OP_LOADNIL, rega, regb, node.NodeInfo.Line)
 }
 
-func (c *compiler) VisitBool(node *ast.Bool) {
-
+func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
+  var reg, value int
+  expr, ok := data.(*exprdata)
+  if !ok {
+    reg = c.block.genRegisterId()
+  } else {
+    reg = expr.rega
+  }
+  if node.Value {
+    value = 1
+  }
+  c.emitAB(OP_LOADBOOL, reg, value, node.NodeInfo.Line)
 }
 
-func (c *compiler) VisitNumber(node *ast.Number) {
-
-}
-
-func (c *compiler) VisitId(node *ast.Id) {
-
-}
-
-func (c *compiler) VisitString(node *ast.String) {
-
-}
-
-func (c *compiler) VisitArray(node *ast.Array) {
-
-}
-
-func (c *compiler) VisitObjectField(node *ast.ObjectField) {
+func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
 
 }
 
-func (c *compiler) VisitObject(node *ast.Object) {
+func (c *compiler) VisitId(node *ast.Id, data interface{}) {
 
 }
 
-func (c *compiler) VisitFunction(node *ast.Function) {
+func (c *compiler) VisitString(node *ast.String, data interface{}) {
+
+}
+
+func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
+
+}
+
+func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
+
+}
+
+func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
+
+}
+
+func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
  
 }
 
-func (c *compiler) VisitSelector(node *ast.Selector) {
+func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
  
 }
 
-func (c *compiler) VisitSubscript(node *ast.Subscript) {
+func (c *compiler) VisitSubscript(node *ast.Subscript, data interface{}) {
 
 }
 
-func (c *compiler) VisitSlice(node *ast.Slice) {
+func (c *compiler) VisitSlice(node *ast.Slice, data interface{}) {
 
 }
 
-func (c *compiler) VisitKwArg(node *ast.KwArg) {
+func (c *compiler) VisitKwArg(node *ast.KwArg, data interface{}) {
   
 }
 
-func (c *compiler) VisitVarArg(node *ast.VarArg) {
+func (c *compiler) VisitVarArg(node *ast.VarArg, data interface{}) {
 
 }
 
-func (c *compiler) VisitCallExpr(node *ast.CallExpr) {
+func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
 
 }
 
-func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr) {
+func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
  
 }
 
-func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr) {
+func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
 
 }
 
-func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr) {
+func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
 
 }
 
-func (c *compiler) VisitDeclaration(node *ast.Declaration) {
+func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
  
 }
 
-func (c *compiler) VisitAssignment(node *ast.Assignment) {
+func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
  
 }
 
-func (c *compiler) VisitBranchStmt(node *ast.BranchStmt) {
+func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
 
 }
 
-func (c *compiler) VisitReturnStmt(node *ast.ReturnStmt) {
+func (c *compiler) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) {
 
 }
 
-func (c *compiler) VisitIfStmt(node *ast.IfStmt) {
+func (c *compiler) VisitIfStmt(node *ast.IfStmt, data interface{}) {
  
 }
 
-func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt) {
+func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interface{}) {
 
 }
 
-func (c *compiler) VisitForStmt(node *ast.ForStmt) {
+func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
 
 }
 
-func (c *compiler) VisitBlock(node *ast.Block) {
+func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
   
 }
 
@@ -182,10 +198,10 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   switch node := root.(type) {
   case *ast.Block:
     for _, stmt := range node.Nodes {
-      stmt.Accept(&c)
+      stmt.Accept(&c, nil)
     }
   default:
-    node.Accept(&c)
+    node.Accept(&c, nil)
   }
 
   res = c.mainFunc
