@@ -35,7 +35,7 @@ func (p *prettyprinter) VisitBool(node *Bool, data interface{}) {
 }
 
 func (p *prettyprinter) VisitNumber(node *Number, data interface{}) {
-  p.buf.WriteString(fmt.Sprintf("(%s %s)", node.Type, node.Value))
+  p.buf.WriteString(fmt.Sprintf("(number %f)", node.Value))
 }
 
 func (p *prettyprinter) VisitId(node *Id, data interface{}) {

@@ -29,8 +29,7 @@ type (
 
   Number struct {
     NodeInfo
-    Type  Token // int or float
-    Value string
+    Value float64
   }
 
   Id struct {

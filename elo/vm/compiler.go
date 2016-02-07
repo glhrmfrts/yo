@@ -15,14 +15,28 @@ type (
 
   // holds registers for a expression
   exprdata struct {
-    rega int
-    regb int
+    propagate bool
+    rega      int // rega is default for read
+    regb      int // regb is default for write
+  }
+
+  // lexical scope of a name
+  scope int
+
+  // lexical context of a block, (function, loop, branch...)
+  blockcontext int
+
+  // information of a name in the program
+  nameinfo struct {
+    isConst bool
+    reg     int
+    scope   scope
   }
 
   // lexical block structure for compiler
   compilerblock struct {
     registerId int
-    names      map[string]int
+    names      map[string]nameinfo
     proto      *FuncProto
   }
 
@@ -32,6 +46,18 @@ type (
     mainFunc *FuncProto
     block    *compilerblock
   }
+)
+
+const (
+  kScopeLocal scope = iota
+  kScopeUpval
+  kScopeGlobal
+)
+
+const (
+  kContextFunc blockcontext = iota
+  kContextLoop
+  kContextBranch
 )
 
 func (err *CompileError) Error() string {
@@ -90,6 +116,58 @@ func (c *compiler) addConst(value Value) int {
   return int(f.NumConsts - 1)
 }
 
+func (c *compiler) nameInfo(name string) *nameinfo {
+  var closures int
+  block := c.block
+  for block != nil {
+    info, ok := block.names[name]
+    if ok {
+      if closures > 0 {
+        info.scope = kScopeUpval
+      }
+      return info
+    }
+    if block.context == kContextFunc {
+      closures++
+    }
+    block = block.parent
+  }
+
+  // assume a name is global if it can't be found
+  return &nameinfo{false, 0, kScopeGlobal}
+}
+
+// try to "constant fold" an expression
+func (c *compiler) constFold(node ast.Node) (Value, bool) {
+  switch t := node.(type) {
+  case *ast.UnaryExpr:
+    if t.Op == ast.T_MINUS {
+      num, ok := t.Right.(*ast.Number)
+      if ok {
+        return Number(-parseNumber(num.Value)), true
+      } else {
+        val, ok := c.constFold(t.Right)
+        if ok {
+          return -val, true
+        }
+        return nil, false
+      }
+    } else {
+      b, ok := t.Right.(*ast.Bool)
+      if ok {
+        return Bool(!b.Value)
+      } else {
+        val, ok := c.constFold(t.Right)
+        if ok {
+          return Bool(!bool(val)), true
+        }
+        return nil, false
+      }
+    }
+  }
+  return nil, false
+}
+
 func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   var rega, regb int
   expr, ok := data.(*exprdata)
@@ -118,25 +196,15 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
 
 func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
   var reg int
-  var value Value
+  value := Number(node.Value)
   expr, ok := data.(*exprdata)
-  if !ok {
-    reg = c.genRegisterId()
-  } else {
+  if ok && expr.propagate {
+    expr.regb = kConstOffset + c.addConst(value)
+    return
+  } else if ok {
     reg = expr.rega
-  }
-  if node.Type == ast.T_FLOAT {
-    f, err := strconv.ParseFloat(node.Value, 64)
-    if err != nil {
-      panic(err)
-    }
-    value = Number(f)
   } else {
-    i, err := strconv.Atoi(node.Value)
-    if err != nil {
-      panic(err)
-    }
-    value = Number(float64(i))
+    reg = c.genRegisterId()
   }
   c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
@@ -155,7 +223,23 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
 }
 
 func (c *compiler) VisitId(node *ast.Id, data interface{}) {
-
+  var reg int
+  expr, ok := data.(*exprdata)
+  if !ok {
+    reg = c.genRegisterId()
+  } else {
+    reg = expr.rega
+  }
+  info := c.nameInfo(node.Value)
+  switch info.scope {
+  case kScopeLocal:
+    c.emitAB(OP_MOVE, reg, info.reg, node.NodeInfo.Line)
+  case kScopeUpval:
+    //c.emitAB(OP_LOADUPVAL, reg, c.addUpval(node.Value), node.NodeInfo.Line)
+    break
+  case kScopeGlobal:
+    c.emitAB(OP_LOADGLOBAL, reg, c.addConst(node.Value), node.NodeInfo.Line)
+  }
 }
 
 func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
@@ -199,7 +283,32 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
 }
 
 func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
- 
+  var reg int
+  expr, exprok := data.(*exprdata)
+  value, ok := c.constFold(node)
+  if ok {
+    if exprok && expr.propagate {
+      expr.regb = kConstOffset + c.addConst(value)
+      return
+    }
+    c.emitAB(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  } else {
+    if exprok {
+      reg = expr.dstreg
+    } else {
+      reg = c.genRegisterId()
+    }
+    var op Opcode
+    switch node.Op {
+    case ast.T_MINUS:
+      op = OP_NEGATE
+    case ast.T_NOT, ast.T_BANG:
+      op = OP_NOT
+    }
+    exprdata := exprdata{true}
+    node.Right.Accept(c, &exprdata)
+    c.emitAB(op, reg, exprdata.regb, node.NodeInfo.Line)
+  }
 }
 
 func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {

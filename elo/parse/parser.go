@@ -28,6 +28,22 @@ func (err *ParseError) Error() string {
 // common productions
 //
 
+func parseNumber(typ ast.Token, str string) float64 {
+  if typ == ast.T_FLOAT {
+    f, err := strconv.ParseFloat(str, 64)
+    if err != nil {
+      panic(err)
+    }
+    return f
+  } else {
+    i, err := strconv.Atoi(str)
+    if err != nil {
+      panic(err)
+    }
+    return float64(i)
+  }
+}
+
 func (p *parser) error(msg string) {
   t := p.tokenizer
   panic(&ParseError{Guilty: p.tok, Line: t.lineno, File: t.filename, Message: msg})
@@ -312,7 +328,7 @@ func (p *parser) primaryExpr() ast.Node {
     defer p.next()
     switch p.tok {
     case ast.T_INT, ast.T_FLOAT:
-      return &ast.Number{Type: p.tok, Value: p.literal, NodeInfo: ast.NodeInfo{line}}
+      return &ast.Number{Type: p.tok, Value: parseNumber(p.literal), NodeInfo: ast.NodeInfo{line}}
     case ast.T_ID:
       return &ast.Id{Value: p.literal, NodeInfo: ast.NodeInfo{line}}
     case ast.T_STRING:
