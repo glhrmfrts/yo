@@ -29,6 +29,7 @@ type (
   // information of a name in the program
   nameinfo struct {
     isConst bool
+    value   Value // only set if isConst == true
     reg     int
     scope   scope
   }
@@ -69,10 +70,36 @@ func (err *CompileError) Error() string {
 }
 
 
-func newCompilerBlock(proto *FuncProto) *compilerblock {
+func newCompilerBlock(proto *FuncProto, context blockcontext) *compilerblock {
   return &compilerblock{
     proto: proto,
+    context: context,
+    names: make(map[string]*nameinfo, 128),
   }
+}
+
+func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
+  var closures int
+  block := b
+  for block != nil {
+    info, ok := block.names[name]
+    if ok {
+      if closures > 0 {
+        info.scope = kScopeUpval
+      }
+      return info, true
+    }
+    if block.context == kContextFunc {
+      closures++
+    }
+    block = block.parent
+  }
+
+  return nil, false
+}
+
+func (b *compilerblock) addNameInfo(name string, info *nameinfo) {
+  b.names[name] = info
 }
 
 
@@ -129,29 +156,7 @@ func (c *compiler) addConst(value Value) int {
   return int(f.NumConsts - 1)
 }
 
-func (c *compiler) nameInfo(name string) *nameinfo {
-  var closures int
-  block := c.block
-  for block != nil {
-    info, ok := block.names[name]
-    if ok {
-      if closures > 0 {
-        info.scope = kScopeUpval
-      }
-      return info
-    }
-    if block.context == kContextFunc {
-      closures++
-    }
-    block = block.parent
-  }
-
-  // assume a name is global if it can't be found
-  return &nameinfo{false, 0, kScopeGlobal}
-}
-
 // try to "constant fold" an expression
-// TODO: work with constant names
 func (c *compiler) constFold(node ast.Node) (Value, bool) {
   switch t := node.(type) {
   case *ast.Number:
@@ -160,6 +165,11 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
     return Bool(t.Value), true
   case *ast.String:
     return String(t.Value), true
+  case *ast.Id:
+    info, ok := c.block.nameInfo(t.Value)
+    if ok && info.isConst {
+      return info.value, true
+    }
   case *ast.UnaryExpr:
     if t.Op == ast.T_MINUS {
       val, ok := c.constFold(t.Right)
@@ -307,23 +317,36 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
 }
 
 func (c *compiler) VisitId(node *ast.Id, data interface{}) {
-  /*var reg int
-  expr, ok := data.(*exprdata)
-  if !ok {
+  var reg int
+  var scope scope
+  expr, exprok := data.(*exprdata)
+  if !exprok {
     reg = c.genRegisterId()
   } else {
     reg = expr.rega
   }
-  info := c.nameInfo(node.Value)
-  switch info.scope {
+  info, ok := c.block.nameInfo(node.Value)
+  if ok && info.isConst {
+    c.emitABx(OP_LOADCONST, reg, c.addConst(info.value), node.NodeInfo.Line)
+    scope = -1
+  } else if ok {
+    scope = info.scope
+  } else {
+    // assume global if it can't be found
+    scope = kScopeGlobal
+  }
+  switch scope {
   case kScopeLocal:
     c.emitAB(OP_MOVE, reg, info.reg, node.NodeInfo.Line)
   case kScopeUpval:
     //c.emitAB(OP_LOADUPVAL, reg, c.addUpval(node.Value), node.NodeInfo.Line)
     break
   case kScopeGlobal:
-    c.emitAB(OP_LOADGLOBAL, reg, c.addConst(node.Value), node.NodeInfo.Line)
-  }*/
+    c.emitABx(OP_LOADGLOBAL, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
+  }
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
@@ -414,6 +437,8 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
   } else {
+    // TODO: generate short-circuit code for && and ||
+    
     var op Opcode
     switch node.Op {
     case ast.T_PLUS:
@@ -425,11 +450,14 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     case ast.T_DIV:
       op = OP_DIV
     }
-    exprdata := exprdata{true, 0, 0}
+    exprdata := exprdata{true, reg, 0}
     node.Left.Accept(c, &exprdata)
     left := exprdata.regb
+
+    exprdata.rega += 1
     node.Right.Accept(c, &exprdata)
     right := exprdata.regb
+
     c.emitABC(op, reg, left, right, node.NodeInfo.Line)
     if exprok && expr.propagate {
       expr.regb = reg
@@ -442,7 +470,23 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
 }
 
 func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
- 
+  if node.IsConst {
+    valuesCount := len(node.Right)
+    for i, id := range node.Left {
+      if i >= valuesCount {
+        c.error(node.NodeInfo.Line, "const without initializer")
+      }
+      value, ok := c.constFold(node.Right[i])
+      if !ok {
+        c.error(node.NodeInfo.Line, "const initializer is not a constant")
+      }
+      _, ok = c.block.names[id.Value]
+      if ok {
+        c.error(node.NodeInfo.Line, "cannot redeclare const")
+      }
+      c.block.addNameInfo(id.Value, &nameinfo{true, value, 0, kScopeLocal})
+    }
+  }
 }
 
 func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
@@ -493,7 +537,7 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   var c compiler
   c.filename = filename
   c.mainFunc = newFuncProto(filename)
-  c.block = newCompilerBlock(c.mainFunc)
+  c.block = newCompilerBlock(c.mainFunc, kContextFunc)
   
   root.Accept(&c, nil)
 

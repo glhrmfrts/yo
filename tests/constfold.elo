@@ -7,3 +7,9 @@
 2 + 2 * 4 + 5
 "hello" == "hello"
 "john" != "mary"
+
+const john, mary = 5, 8.15
+
+john == 5 //=> compiled: true
+mary > john //=> compiled: true
+mary == john //=> compiled: false

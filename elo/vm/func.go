@@ -69,9 +69,7 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
       }
       buf.WriteString(fmt.Sprintf("\t!%d %s", opGetA(instr), bstr))
     case OP_ADD, OP_SUB, OP_MUL, OP_DIV:
-      a := opGetA(instr)
-      b := opGetB(instr)
-      c := opGetC(instr)
+      a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       var bstr, cstr string
       if b >= kConstOffset {
         bstr = fmt.Sprint(f.Consts[b-kConstOffset])
@@ -84,6 +82,12 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
         cstr = fmt.Sprintf("!%d", c)
       }
       buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
+    case OP_MOVE:
+      a, b := opGetA(instr), opGetB(instr)
+      buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
+    case OP_LOADGLOBAL:
+      a, bx := opGetA(instr), opGetBx(instr)
+      buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
     }
 
     buf.WriteString("\n")

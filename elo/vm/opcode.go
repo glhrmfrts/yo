@@ -29,6 +29,9 @@ const (
   OP_SUB                    // set R(A) to RK(B) - RK(C)
   OP_MUL                    // set R(A) to RK(B) * RK(C)
   OP_DIV                    // set R(A) to RK(B) / RK(C)
+
+  OP_MOVE                   // set R(A) to R(B)
+  OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]
 )
 
 // instruction parameters
@@ -61,6 +64,9 @@ var (
     OP_SUB: "OP_SUB",
     OP_MUL: "OP_MUL",
     OP_DIV: "OP_DIV",
+
+    OP_MOVE: "OP_MOVE",
+    OP_LOADGLOBAL: "OP_LOADGLOBAL",
   }
 )
 
