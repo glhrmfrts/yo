@@ -1,36 +1,3 @@
 // test variable assignment and declaration
 
-var a
-var a = 2
-var a, b
-var a, b, c = 1, 2, 3
-
-// TODO: should the parser detect uninitialized constants?
-const a, b
-const a, b = 1, 2
-
-a, b := 1, 2
-a := callFunc()
-
-a, b = 1, 2
-a = 2
-
-a.field = "value"
-a[2] = false
-
-getObj().field = "value"
-getArray()[0] = nil
-
-a += 1
-b -= 2
-c *= 3
-d /= 4
-
-a |= 5
-b &= 0xff
-c ^= c << 1
-a = b; c = 2
-
-// I think the parser should also reject this?
-// call() = 2
-// func() {} = 3
+var a = c + b + d

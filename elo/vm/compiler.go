@@ -32,6 +32,7 @@ type (
     value   Value // only set if isConst == true
     reg     int
     scope   scope
+    block   *compilerblock
   }
 
   // lexical block structure for compiler
@@ -99,6 +100,7 @@ func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
 }
 
 func (b *compilerblock) addNameInfo(name string, info *nameinfo) {
+  info.block = b
   b.names[name] = info
 }
 
@@ -305,20 +307,21 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
 
 func (c *compiler) VisitString(node *ast.String, data interface{}) {
   var reg int
-  var value Value
-  expr, ok := data.(*exprdata)
-  if !ok {
-    reg = c.genRegisterId()
-  } else {
+  value := String(node.Value)
+  if ok && expr.propagate {
+    expr.regb = kConstOffset + c.addConst(value)
+    return
+  } else if ok {
     reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
   }
-  value = String(node.Value)
   c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   var reg int
-  var scope scope
+  var scope scope = -1
   expr, exprok := data.(*exprdata)
   if !exprok {
     reg = c.genRegisterId()
@@ -327,8 +330,11 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   }
   info, ok := c.block.nameInfo(node.Value)
   if ok && info.isConst {
+    if exprok && expr.propagate {
+      expr.regb = kConstOffset + c.addConst(info.value)
+      return
+    }
     c.emitABx(OP_LOADCONST, reg, c.addConst(info.value), node.NodeInfo.Line)
-    scope = -1
   } else if ok {
     scope = info.scope
   } else {
@@ -337,15 +343,16 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   }
   switch scope {
   case kScopeLocal:
+    if exprok && expr.propagate {
+      expr.regb = info.reg
+      return
+    }
     c.emitAB(OP_MOVE, reg, info.reg, node.NodeInfo.Line)
-  case kScopeUpval:
-    //c.emitAB(OP_LOADUPVAL, reg, c.addUpval(node.Value), node.NodeInfo.Line)
-    break
-  case kScopeGlobal:
+  case kScopeUpval, kScopeGlobal:
     c.emitABx(OP_LOADGLOBAL, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
-  }
-  if exprok && expr.propagate {
-    expr.regb = reg
+    if exprok && expr.propagate {
+      expr.regb = reg
+    }
   }
 }
 
@@ -437,7 +444,24 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
   } else {
-    // TODO: generate short-circuit code for && and ||
+    if isAnd, isOr := node.Op == ast.T_AMPAMP, node.Op == ast.T_PIPEPIPE; isAnd || isOr {
+      var op Opcode
+      if isAnd {
+        op = OP_JMPFALSE
+      } else {
+        op = OP_JMPTRUE
+      }
+      exprdata := exprdata{true, reg, 0}
+      node.Left.Accept(c, &exprdata)
+      left := exprdata.regb
+
+      jmpInstr := c.emitABx(op, left, 0, node.NodeInfo.Line)
+      size := c.currentCodeSize()
+
+      exprdata.propagate = false
+      node.Right.Accept(c, &exprdata)
+      c.setABx(jmpInstr, op, left, c.currentCodeSize() - size)
+    }
     
     var op Opcode
     switch node.Op {
@@ -454,6 +478,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     node.Left.Accept(c, &exprdata)
     left := exprdata.regb
 
+    // temp register for right expression
     exprdata.rega += 1
     node.Right.Accept(c, &exprdata)
     right := exprdata.regb
@@ -469,22 +494,49 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
 
 }
 
+// VisitDeclaration generates code for variable declaration.
+// For consts declaration no code is generated, they are only kept
+// in the current block's local symbol table.
 func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
+  valuesCount := len(node.Right)
   if node.IsConst {
-    valuesCount := len(node.Right)
     for i, id := range node.Left {
+      _, ok := c.block.names[id.Value]
+      if ok {
+        c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
+      }
       if i >= valuesCount {
-        c.error(node.NodeInfo.Line, "const without initializer")
+        c.error(node.NodeInfo.Line, fmt.Sprintf("const '%s' without initializer", id.Value))
       }
       value, ok := c.constFold(node.Right[i])
       if !ok {
-        c.error(node.NodeInfo.Line, "const initializer is not a constant")
+        c.error(node.NodeInfo.Line, fmt.Sprintf("const '%s' initializer is not a constant", id.Value))
       }
-      _, ok = c.block.names[id.Value]
+      c.block.addNameInfo(id.Value, &nameinfo{true, value, 0, kScopeLocal, c.block})
+    }
+  } else {
+    // declare local variables
+    start := c.block.registerId
+    end := start - 1
+    for i, id := range node.Left {
+      _, ok := c.block.names[id.Value]
       if ok {
-        c.error(node.NodeInfo.Line, "cannot redeclare const")
+        c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
       }
-      c.block.addNameInfo(id.Value, &nameinfo{true, value, 0, kScopeLocal})
+      reg := c.genRegisterId()
+      if i >= valuesCount {
+        end = reg
+      } else {
+        // load value into new register
+        exprdata := exprdata{false, reg, 0}
+        node.Right[i].Accept(c, &exprdata)
+        start = reg + 1
+      }
+      c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+    }
+    if end >= start {
+      // variables without initializer are set to nil
+      c.emitAB(OP_LOADNIL, start, end, node.NodeInfo.Line)
     }
   }
 }
@@ -523,6 +575,10 @@ func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
   }
 }
 
+// Compile receives the root node of the AST and generates code 
+// for the "main" function from it.
+// Any type of Node is accepted, either a block representing the program
+// or a single expression.
 func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   defer func() {
     if r := recover(); r != nil {

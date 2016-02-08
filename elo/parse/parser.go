@@ -530,7 +530,7 @@ func (p *parser) declaration() ast.Node {
   // '='
   if (!p.accept(ast.T_EQ)) {
     // a declaration without any values
-    return &ast.Declaration{IsConst: isConst, Left: left}
+    return &ast.Declaration{IsConst: isConst, Left: left, NodeInfo: ast.NodeInfo{line}}
   }
 
   right := p.exprList(false)
