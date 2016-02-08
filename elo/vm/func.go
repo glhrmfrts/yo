@@ -1,5 +1,10 @@
 package vm
 
+import (
+  "fmt"
+  "bytes"
+)
+
 type LineInfo struct {
   Instr uint32 // the instruction index
   Line  uint16
@@ -25,5 +30,46 @@ const (
 func newFuncProto(source string) *FuncProto {
   return &FuncProto{
     Source: source,
+  }
+}
+
+func Disasm(f *FuncProto, buf *bytes.Buffer) {
+  buf.WriteString(fmt.Sprintf("function at %s\n", f.Source))
+  buf.WriteString(fmt.Sprintf("consts: %d\n", f.NumConsts))
+  for _, c := range f.Consts {
+    buf.WriteString(fmt.Sprint("\t", c))
+  }
+  buf.WriteString("\n\n")
+  buf.WriteString("line\t#\topcode\t\targs\n")
+
+  var currentLine uint32
+  for i, instr := range f.Code {
+    if currentLine + 1 < f.NumLines && (i >= int(f.Lines[currentLine + 1].Instr)) {
+      currentLine += 1
+    }
+
+    line := f.Lines[currentLine]
+    opcode := opGetOpcode(instr)
+
+    buf.WriteString(fmt.Sprint(line.Line, "\t", i))
+    buf.WriteString(fmt.Sprint("\t", opcode, "\t"))
+
+    switch opcode {
+    case OP_LOADNIL:
+      buf.WriteString(fmt.Sprintf("!%d !%d", opGetA(instr), opGetB(instr)))
+    case OP_LOADCONST:
+      buf.WriteString(fmt.Sprintf("!%d %s", opGetA(instr), f.Consts[opGetBx(instr)]))
+    case OP_NEGATE, OP_NOT:
+      bx := opGetBx(instr)
+      var bstr string
+      if bx >= kConstOffset {
+        bstr = fmt.Sprint(f.Consts[bx-kConstOffset])
+      } else {
+        bstr = fmt.Sprintf("!%d", bx)
+      }
+      buf.WriteString(fmt.Sprintf("!%d %s", opGetA(instr), bstr))
+    }
+
+    buf.WriteString("\n")
   }
 }

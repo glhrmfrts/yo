@@ -18,6 +18,10 @@ const (
 var (
   opStrings = map[Opcode]string{
     OP_LOADNIL: "OP_LOADNIL",
+    OP_LOADCONST: "OP_LOADCONST",
+
+    OP_NEGATE: "OP_NEGATE",
+    OP_NOT: "OP_NOT",
   }
 )
 

@@ -19,7 +19,7 @@ type tokenizer struct {
   lineno int
 }
 
-const bom = 0xFEFF // byte-order mark, only allowed as the first character
+const bom = 0xFEFF
 const eof = -1
 
 func isLetter(ch rune) bool {

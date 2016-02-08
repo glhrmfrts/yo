@@ -281,3 +281,14 @@ func (node *ForStmt) Accept(v Visitor, data interface{}) {
 func (node *Block) Accept(v Visitor, data interface{}) {
   v.VisitBlock(node, data)
 }
+
+// return true if the given node is a statement
+func IsStmt(node Node) bool {
+  switch node.(type) {
+  case *Assignment, *IfStmt, *ForStmt, *ForIteratorStmt,
+       *BranchStmt, *ReturnStmt, *Declaration:
+    return true
+  default:
+    return false
+  }
+}

@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "os"
+  "bytes"
   "io/ioutil"
 	"github.com/glhrmfrts/elo-lang/elo/parse"
   "github.com/glhrmfrts/elo-lang/elo/ast"
@@ -31,5 +32,7 @@ func main() {
     return
   }
 
-  fmt.Println(code)
+  buf := new(bytes.Buffer)
+  vm.Disasm(code, buf)
+  fmt.Println(buf.String())
 }

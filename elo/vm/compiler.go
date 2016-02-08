@@ -84,6 +84,7 @@ func (c *compiler) emitInstruction(instr uint32, line int) {
 
   if line != c.lastLine {
     f.Lines = append(f.Lines, LineInfo{f.NumCode - 1, uint16(line)})
+    f.NumLines++
     c.lastLine = line
   }
 }
@@ -297,6 +298,11 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
 func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
   var reg int
   expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
+  }
   value, ok := c.constFold(node)
   if ok {
     if exprok && expr.propagate {
@@ -305,11 +311,6 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
   } else {
-    if exprok {
-      reg = expr.rega
-    } else {
-      reg = c.genRegisterId()
-    }
     var op Opcode
     switch node.Op {
     case ast.T_MINUS:
@@ -360,7 +361,13 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
 }
 
 func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
-  
+  for _, stmt := range node.Nodes {
+    stmt.Accept(c, nil)
+
+    if !ast.IsStmt(stmt) {
+      c.block.registerId -= 1
+    }
+  }
 }
 
 func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
@@ -379,14 +386,7 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   c.mainFunc = newFuncProto(filename)
   c.block = newCompilerBlock(c.mainFunc)
   
-  switch node := root.(type) {
-  case *ast.Block:
-    for _, stmt := range node.Nodes {
-      stmt.Accept(&c, nil)
-    }
-  default:
-    node.Accept(&c, nil)
-  }
+  root.Accept(&c, nil)
 
   res = c.mainFunc
   return
