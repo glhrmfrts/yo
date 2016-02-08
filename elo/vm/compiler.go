@@ -50,12 +50,14 @@ type (
   }
 )
 
+// names lexical scopes
 const (
   kScopeLocal scope = iota
   kScopeUpval
   kScopeGlobal
 )
 
+// blocks context
 const (
   kContextFunc blockcontext = iota
   kContextLoop
@@ -390,6 +392,9 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     exprdata := exprdata{true, 0, 0}
     node.Right.Accept(c, &exprdata)
     c.emitABx(op, reg, exprdata.regb, node.NodeInfo.Line)
+    if exprok && expr.propagate {
+      expr.regb = reg
+    }
   }
 }
 
