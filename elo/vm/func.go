@@ -35,7 +35,7 @@ func newFuncProto(source string) *FuncProto {
 
 func Disasm(f *FuncProto, buf *bytes.Buffer) {
   buf.WriteString(fmt.Sprintf("function at %s\n", f.Source))
-  buf.WriteString(fmt.Sprintf("consts: %d\n", f.NumConsts))
+  buf.WriteString(fmt.Sprintf("constants: %d\n", f.NumConsts))
   for _, c := range f.Consts {
     buf.WriteString(fmt.Sprint("\t", c))
   }
@@ -67,7 +67,23 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
       } else {
         bstr = fmt.Sprintf("!%d", bx)
       }
-      buf.WriteString(fmt.Sprintf("!%d %s", opGetA(instr), bstr))
+      buf.WriteString(fmt.Sprintf("\t!%d %s", opGetA(instr), bstr))
+    case OP_ADD, OP_SUB, OP_MUL, OP_DIV:
+      a := opGetA(instr)
+      b := opGetB(instr)
+      c := opGetC(instr)
+      var bstr, cstr string
+      if b >= kConstOffset {
+        bstr = fmt.Sprint(f.Consts[b-kConstOffset])
+      } else {
+        bstr = fmt.Sprintf("!%d", b)
+      }
+      if c >= kConstOffset {
+        cstr = fmt.Sprint(f.Consts[c-kConstOffset])
+      } else {
+        cstr = fmt.Sprintf("!%d", c)
+      }
+      buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
     }
 
     buf.WriteString("\n")

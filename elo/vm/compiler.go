@@ -2,6 +2,7 @@ package vm
 
 import (
   "fmt"
+  "math"
   "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
@@ -93,6 +94,10 @@ func (c *compiler) emitAB(op Opcode, a, b, line int) {
   c.emitInstruction(opNewAB(op, a, b), line)
 }
 
+func (cc *compiler) emitABC(op Opcode, a, b, c, line int) {
+  cc.emitInstruction(opNewABC(op, a, b, c), line)
+}
+
 func (c *compiler) emitABx(op Opcode, a, b, line int) {
   c.emitInstruction(opNewABx(op, a, b), line)
 }
@@ -144,36 +149,100 @@ func (c *compiler) nameInfo(name string) *nameinfo {
 }
 
 // try to "constant fold" an expression
+// TODO: work with constant names
 func (c *compiler) constFold(node ast.Node) (Value, bool) {
   switch t := node.(type) {
+  case *ast.Number:
+    return Number(t.Value), true
+  case *ast.Bool:
+    return Bool(t.Value), true
+  case *ast.String:
+    return String(t.Value), true
   case *ast.UnaryExpr:
     if t.Op == ast.T_MINUS {
-      num, ok := t.Right.(*ast.Number)
-      if ok {
-        return Number(-num.Value), true
-      } else {
-        val, ok := c.constFold(t.Right)
-        if ok {
-          f64, ok := val.assertFloat64()
-          if ok {
-            return Number(-f64), true
-          }
-        }
+      val, ok := c.constFold(t.Right)
+      if ok && val.Type() == VALUE_NUMBER {
+        f64, _ := val.assertFloat64()
+        return Number(-f64), true
+      }
+      return nil, false
+    } else {
+      // 'not' operator
+      val, ok := c.constFold(t.Right)
+      if ok && val.Type() == VALUE_BOOL {
+        bool_, _ := val.assertBool()
+        return Bool(!bool_), true
+      }
+      return nil, false
+    }
+  case *ast.BinaryExpr:
+    left, leftOk := c.constFold(t.Left)
+    right, rightOk := c.constFold(t.Right)
+    if leftOk && rightOk {
+      var ret Value
+      if left.Type() != right.Type() {
         return nil, false
       }
-    } else {
-      b, ok := t.Right.(*ast.Bool)
-      if ok {
-        return Bool(!b.Value), true
-      } else {
-        val, ok := c.constFold(t.Right)
-        if ok {
-          bool_, ok := val.assertBool()
-          if ok {
-            return Bool(!bool_), true
-          }
-        }
+      lf64, ok := left.assertFloat64()
+      rf64, _ := right.assertFloat64()
+      if !ok {
+        goto boolOps
+      }
+
+      // first check all arithmetic/relational operations
+      switch t.Op {
+      case ast.T_PLUS:
+        ret = Number(lf64 + rf64)
+      case ast.T_MINUS:
+        ret = Number(lf64 - rf64)
+      case ast.T_TIMES:
+        ret = Number(lf64 * rf64)
+      case ast.T_DIV:
+        ret = Number(lf64 / rf64)
+      case ast.T_TIMESTIMES:
+        ret = Number(math.Pow(lf64, rf64))
+      case ast.T_LT:
+        ret = Bool(lf64 < rf64)
+      case ast.T_LTEQ:
+        ret = Bool(lf64 <= rf64)
+      case ast.T_GT:
+        ret = Bool(lf64 > rf64)
+      case ast.T_GTEQ:
+        ret = Bool(lf64 >= rf64)
+      case ast.T_EQEQ:
+        ret = Bool(lf64 == rf64)
+      }
+      if ret != nil {
+        return ret, true
+      }
+
+    boolOps:
+      // not arithmetic/relational, maybe logic?
+      lb, ok := left.assertBool()
+      rb, _ := right.assertBool()
+      if !ok {
+        goto stringOps
+      }
+
+      switch t.Op {
+      case ast.T_AMPAMP:
+        return Bool(lb && rb), true
+      case ast.T_PIPEPIPE:
+        return Bool(lb || rb), true
+      }
+
+    stringOps:
+      ls, ok := left.assertString()
+      rs, _ := right.assertString()
+      if !ok {
         return nil, false
+      }
+
+      switch t.Op {
+      case ast.T_EQEQ:
+        return Bool(ls == rs), true
+      case ast.T_BANGEQ:
+        return Bool(ls != rs), true
       }
     }
   }
@@ -356,7 +425,10 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     left := exprdata.regb
     node.Right.Accept(c, &exprdata)
     right := exprdata.regb
-    c.emitABC(op, reg, left, right)
+    c.emitABC(op, reg, left, right, node.NodeInfo.Line)
+    if exprok && expr.propagate {
+      expr.regb = reg
+    }
   }
 }
 

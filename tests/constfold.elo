@@ -1,6 +1,9 @@
 // test constant folding
 
-!false
+!(!false)
 !true;
 -2;
 -(-(5.451))
+2 + 2 * 4 + 5
+"hello" == "hello"
+"john" != "mary"
