@@ -1,4 +1,8 @@
-// heavily inspired by Go's scanner :)
+// Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
+// Copyright 2009 The Go Authors. All rights reserved.
+//
+// Some parts of this file were taken from Go's source code.
+// For more details please take a look at the LICENSE file
 
 package parse
 

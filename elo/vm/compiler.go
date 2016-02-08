@@ -325,7 +325,39 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
 }
 
 func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
-
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
+  }
+  value, ok := c.constFold(node)
+  if ok {
+    if exprok && expr.propagate {
+      expr.regb = kConstOffset + c.addConst(value)
+      return
+    }
+    c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  } else {
+    var op Opcode
+    switch node.Op {
+    case ast.T_PLUS:
+      op = OP_ADD
+    case ast.T_MINUS:
+      op = OP_SUB
+    case ast.T_TIMES:
+      op = OP_MUL
+    case ast.T_DIV:
+      op = OP_DIV
+    }
+    exprdata := exprdata{true, 0, 0}
+    node.Left.Accept(c, &exprdata)
+    left := exprdata.regb
+    node.Right.Accept(c, &exprdata)
+    right := exprdata.regb
+    c.emitABC(op, reg, left, right)
+  }
 }
 
 func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {

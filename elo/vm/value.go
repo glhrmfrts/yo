@@ -60,7 +60,7 @@ func (v Number) assertFloat64() (float64, bool) { return float64(v), true }
 func (v Number) assertBool() (bool, bool)       { return false, false }
 
 func (v Number) String() string {
-  return fmt.Sprintf("%f", float64(v))
+  return fmt.Sprint(float64(v))
 }
 
 func (v String) Type() ValueType                { return VALUE_STRING }
