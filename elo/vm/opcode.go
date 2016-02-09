@@ -29,6 +29,17 @@ const (
   OP_SUB                    // set R(A) to RK(B) - RK(C)
   OP_MUL                    // set R(A) to RK(B) * RK(C)
   OP_DIV                    // set R(A) to RK(B) / RK(C)
+  OP_POW                    // set R(A) to pow(RK(B), RK(C))
+  OP_SHL                    // set R(A) to RK(B) << RK(C)
+  OP_SHR                    // set R(A) to RK(B) >> RK(C)
+  OP_AND                    // set R(A) to RK(B) & RK(C)
+  OP_OR                     // set R(A) to RK(B) | RK(C)
+  OP_XOR                    // set R(A) to RK(B) ^ RK(C)
+  OP_CMPL                   // set R(A) to ^RK(B)
+  OP_LT                     // set R(A) to RK(B) < RK(C)
+  OP_LE                     // set R(A) to RK(B) <= RK(C)
+  OP_EQ                     // set R(A) to RK(B) == RK(C)
+  OP_NEQ                    // set R(A) to RK(B) != RK(C)
 
   OP_MOVE                   // set R(A) to R(B)
   OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]

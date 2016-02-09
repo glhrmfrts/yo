@@ -282,6 +282,9 @@ func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   expr, ok := data.(*exprdata)
   if ok {
     rega, regb = expr.rega, expr.regb
+    if rega > regb {
+      regb = rega
+    }
   } else {
     rega = c.genRegisterId()
     regb = rega
@@ -489,7 +492,16 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       op = OP_MUL
     case ast.T_DIV:
       op = OP_DIV
+    case ast.T_LT, ast.T_GTEQ:
+      op = OP_LT
+    case ast.T_LTEQ, ast.T_GT:
+      op = OP_LE
+    case ast.T_EQ:
+      op = OP_EQ
+    case ast.T_BANGEQ:
+      op = OP_NEQ
     }
+    
     exprdata := exprdata{true, reg, 0}
     node.Left.Accept(c, &exprdata)
     left := exprdata.regb
@@ -499,7 +511,13 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     node.Right.Accept(c, &exprdata)
     right := exprdata.regb
 
-    c.emitABC(op, reg, left, right, node.NodeInfo.Line)
+    if node.Op == ast.T_GT || node.Op == ast.T_GTEQ {
+      // invert operands
+      c.emitABC(op, reg, right, left, node.NodeInfo.Line)  
+    } else {
+      c.emitABC(op, reg, left, right, node.NodeInfo.Line)
+    }
+
     if exprok && expr.propagate {
       expr.regb = reg
     }
@@ -514,7 +532,7 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
 // For consts declaration no code is generated, they are only kept
 // in the current block's local symbol table.
 func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
-  valuesCount := len(node.Right)
+  namesCount, valuesCount := len(node.Left), len(node.Right)
   if node.IsConst {
     for i, id := range node.Left {
       _, ok := c.block.names[id.Value]
@@ -533,6 +551,9 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
   } else {
     // declare local variables
     // TODO: multiple return values
+    if valuesCount + namesCount > 2 {
+      c.error(node.NodeInfo.Line, fmt.Sprintf("multiple variable declaration is not yet supported"))
+    }
     start := c.block.registerId
     end := start - 1
     for i, id := range node.Left {
@@ -559,7 +580,49 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
 }
 
 func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
- 
+  namesCount, valuesCount := len(node.Left), len(node.Right)
+  if valuesCount + namesCount > 2 {
+    c.error(node.NodeInfo.Line, fmt.Sprintf("multiple assignment is not yet supported"))
+  }
+  value := node.Right[0]
+  if node.Op == ast.T_COLONEQ {
+    // short variable declaration
+    id := node.Left[0].(*ast.Id)
+    _, ok := c.block.names[id.Value]
+    if ok {
+      c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
+    }
+    reg := c.genRegisterId()
+    exprdata := exprdata{false, reg, 0}
+    value.Accept(c, &exprdata)
+    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+    return
+  }
+  // regular assignment, if the left-side is an identifier
+  // it has to be declared already
+  id, ok := node.Left[0].(*ast.Id)
+  if ok {
+    var scope scope
+    info, ok := c.block.names[id.Value]
+    if !ok {
+      scope = kScopeGlobal
+    } else {
+      scope = info.scope
+    }
+    switch scope {
+    case kScopeLocal:
+      exprdata := exprdata{false, info.reg, info.reg}
+      value.Accept(c, &exprdata)
+    case kScopeUpval, kScopeGlobal:
+      // temp register for the value
+      reg := c.block.registerId + 1
+      exprdata := exprdata{true, reg, reg}
+      value.Accept(c, &exprdata)
+      // c.emitABx(OP_SETGLOBAL, exprdata.regb, c.addConst(String(id.Value)), node.NodeInfo.Line)
+    }
+    return
+  }
+  // TODO: object key and array index assignment
 }
 
 func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
