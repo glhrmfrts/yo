@@ -15,7 +15,7 @@ package vm
 // avoids doing bit shifts and the opcode is available
 // by just doing $instr & $opcodeMask
 
-type Opcode int
+type Opcode uint
 
 const (
   OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) to nil
@@ -32,6 +32,10 @@ const (
 
   OP_MOVE                   // set R(A) to R(B)
   OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]
+
+  OP_JMP                    // set pc to pc + Bx
+  OP_JMPTRUE                // set pc to pc + Bx if R(A) is not false or nil
+  OP_JMPFALSE               // set pc to pc + Bx if R(A) is false or nil
 )
 
 // instruction parameters
@@ -67,6 +71,10 @@ var (
 
     OP_MOVE: "OP_MOVE",
     OP_LOADGLOBAL: "OP_LOADGLOBAL",
+
+    OP_JMP: "OP_JMP",
+    OP_JMPTRUE: "OP_JMPTRUE",
+    OP_JMPFALSE: "OP_JMPFALSE",
   }
 )
 
@@ -102,18 +110,22 @@ func opGetOpcode(instr uint32) Opcode {
   return Opcode(instr & kOpcodeMask)
 }
 
-func opGetA(instr uint32) int {
-  return int((instr >> kOpcodeSize) & kArgAMask)
+func opGetA(instr uint32) uint {
+  return uint((instr >> kOpcodeSize) & kArgAMask)
 }
 
-func opGetB(instr uint32) int {
-  return int((instr >> kArgBOffset) & kArgBCMask)
+func opGetB(instr uint32) uint {
+  return uint((instr >> kArgBOffset) & kArgBCMask)
 }
 
-func opGetC(instr uint32) int {
-  return int((instr >> kArgCOffset) & kArgBCMask)
+func opGetC(instr uint32) uint {
+  return uint((instr >> kArgCOffset) & kArgBCMask)
 }
 
-func opGetBx(instr uint32) int {
-  return int((instr >> kArgBOffset) & kArgBxMask)
+func opGetBx(instr uint32) uint {
+  return uint((instr >> kArgBOffset) & kArgBxMask)
+}
+
+func opGetsBx(instr uint32) int {
+  return int((instr >> kArgBOffset) & kArgBxMask) 
 }

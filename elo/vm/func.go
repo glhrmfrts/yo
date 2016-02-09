@@ -88,6 +88,12 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
     case OP_LOADGLOBAL:
       a, bx := opGetA(instr), opGetBx(instr)
       buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
+    case OP_JMP:
+      sbx := opGetsBx(instr)
+      buf.WriteString(fmt.Sprintf("->%d", i + sbx))
+    case OP_JMPTRUE, OP_JMPFALSE:
+      a, sbx := opGetA(instr), opGetsBx(instr)
+      buf.WriteString(fmt.Sprintf("!%d ->%d", a, i + sbx))
     }
 
     buf.WriteString("\n")

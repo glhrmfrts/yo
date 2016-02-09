@@ -15,12 +15,14 @@ import (
 )
 
 type tokenizer struct {
-  offset int
-  readOffset int
-  r rune
-  src []byte
-  filename string
-  lineno int
+  offset      int
+  readOffset  int
+  r           rune
+  src         []byte
+  filename    string
+  lineno      int
+  insertSemi  bool
+  last        ast.Token
 }
 
 const bom = 0xFEFF
@@ -277,6 +279,11 @@ func (t *tokenizer) skipWhitespace() {
   }
 }
 
+func (t *tokenizer) needSemi(tok ast.Token) bool {
+  return (tok == ast.T_ID || tok == ast.T_FLOAT || tok == ast.T_INT || tok == ast.T_STRING || 
+    tok == ast.T_BREAK || tok == ast.T_CONTINUE || tok == ast.T_RETURN)
+}
+
 // functions that look 1 or 2 characters ahead,
 // and return the given token types based on that
 
@@ -309,7 +316,7 @@ func (t *tokenizer) maybe2(a ast.Token, c1 rune, t1 ast.Token, c2 rune, t2 ast.T
 
 // does the actual scanning and return the type of the token
 // and a literal string representing it
-func (t *tokenizer) nextToken() (ast.Token, string) {
+func (t *tokenizer) scan() (ast.Token, string) {
   t.skipWhitespace()
 
   switch ch := t.r; {
@@ -391,6 +398,20 @@ func (t *tokenizer) nextToken() (ast.Token, string) {
 
   fmt.Print(string(t.r))
   return ast.T_ILLEGAL, ""
+}
+
+func (t *tokenizer) nextToken() (ast.Token, string) {
+  if t.insertSemi {
+    t.insertSemi = false
+    t.last = ast.T_SEMICOLON
+    return ast.T_SEMICOLON, ";"
+  }
+  tok, literal := t.scan()
+  if tok == ast.T_NEWLINE && t.needSemi(t.last) {
+    t.insertSemi = true
+  }
+  t.last = tok
+  return tok, literal
 }
 
 func (t *tokenizer) init(source []byte, filename string) {

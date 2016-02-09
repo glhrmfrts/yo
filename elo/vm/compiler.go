@@ -109,7 +109,7 @@ func (c *compiler) error(line int, msg string) {
   panic(&CompileError{Line: line, File: c.filename, Message: msg})
 }
 
-func (c *compiler) emitInstruction(instr uint32, line int) {
+func (c *compiler) emitInstruction(instr uint32, line int) int {
   f := c.block.proto
   f.Code = append(f.Code, instr)
   f.NumCode++
@@ -119,18 +119,32 @@ func (c *compiler) emitInstruction(instr uint32, line int) {
     f.NumLines++
     c.lastLine = line
   }
+  return int(f.NumCode - 1)
 }
 
-func (c *compiler) emitAB(op Opcode, a, b, line int) {
-  c.emitInstruction(opNewAB(op, a, b), line)
+func (c *compiler) modifyInstruction(index int, instr uint32) bool {
+  f := c.block.proto
+  if uint32(index) < f.NumCode {
+    f.Code[index] = instr
+    return true
+  }
+  return false
 }
 
-func (cc *compiler) emitABC(op Opcode, a, b, c, line int) {
-  cc.emitInstruction(opNewABC(op, a, b, c), line)
+func (c *compiler) emitAB(op Opcode, a, b, line int) int {
+  return c.emitInstruction(opNewAB(op, a, b), line)
 }
 
-func (c *compiler) emitABx(op Opcode, a, b, line int) {
-  c.emitInstruction(opNewABx(op, a, b), line)
+func (cc *compiler) emitABC(op Opcode, a, b, c, line int) int {
+  return cc.emitInstruction(opNewABC(op, a, b, c), line)
+}
+
+func (c *compiler) emitABx(op Opcode, a, b, line int) int {
+  return c.emitInstruction(opNewABx(op, a, b), line)
+}
+
+func (c *compiler) modifyABx(index int, op Opcode, a, b int) bool {
+  return c.modifyInstruction(index, opNewABx(op, a, b))
 }
 
 func (c *compiler) genRegisterId() int {
@@ -308,6 +322,7 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
 func (c *compiler) VisitString(node *ast.String, data interface{}) {
   var reg int
   value := String(node.Value)
+  expr, ok := data.(*exprdata)
   if ok && expr.propagate {
     expr.regb = kConstOffset + c.addConst(value)
     return
@@ -456,11 +471,12 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       left := exprdata.regb
 
       jmpInstr := c.emitABx(op, left, 0, node.NodeInfo.Line)
-      size := c.currentCodeSize()
+      size := c.block.proto.NumCode
 
       exprdata.propagate = false
       node.Right.Accept(c, &exprdata)
-      c.setABx(jmpInstr, op, left, c.currentCodeSize() - size)
+      c.modifyABx(jmpInstr, op, left, int(c.block.proto.NumCode - size) + 1)
+      return
     }
     
     var op Opcode
@@ -516,6 +532,7 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
     }
   } else {
     // declare local variables
+    // TODO: multiple return values
     start := c.block.registerId
     end := start - 1
     for i, id := range node.Left {
