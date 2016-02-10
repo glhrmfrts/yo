@@ -282,9 +282,12 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
 // declare local variables
 // assignments are done in sequence, since the registers are created as needed
 func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
+  var isCall, isUnpack bool
   nameCount, valueCount := len(names), len(values)
-  _, isCall := values[valueCount - 1].(*ast.CallExpr)
-  _, isUnpack := values[valueCount - 1].(*ast.VarArg)
+  if valueCount > 0 {
+    _, isCall = values[valueCount - 1].(*ast.CallExpr)
+    _, isUnpack = values[valueCount - 1].(*ast.VarArg)
+  }
   start := c.block.register
   end := start + nameCount - 1
   for i, id := range names {

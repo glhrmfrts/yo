@@ -1,5 +1,6 @@
 // test variable assignment and declaration
 
-getInfo := 2
-a, ok := getInfo()
-arr[2], a, ok = a[2], 6
+var a, t, i
+a = a + i
+a = a + i
+a = t[i]
