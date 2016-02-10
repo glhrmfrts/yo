@@ -411,7 +411,28 @@ func (c *compiler) VisitVarArg(node *ast.VarArg, data interface{}) {
 }
 
 func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
+  var startReg, endReg, resultCount int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    startReg, endReg = expr.rega, expr.regb
+    resultCount = endReg - startReg + 1
+  } else {
+    startReg = c.genRegisterId()
+    endReg = startReg
+    resultCount = 1
+  }
+  callerData := exprdata{true, startReg, startReg}
+  node.Left.Accept(c, &callerData)
+  callerReg := callerData.regb
+  assert(startReg == callerReg)
 
+  for i, arg := range node.Args {
+    reg := endReg + i + 1
+    argData := exprdata{false, reg, reg}
+    arg.Accept(c, &argData)
+  }
+
+  c.emitABC(OP_CALL, callerReg, resultCount, len(node.Args), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
@@ -436,6 +457,8 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
       op = OP_NEGATE
     case ast.T_NOT, ast.T_BANG:
       op = OP_NOT
+    case ast.T_TILDE:
+      op = OP_CMPL
     }
     exprdata := exprdata{true, 0, 0}
     node.Right.Accept(c, &exprdata)
@@ -492,6 +515,18 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       op = OP_MUL
     case ast.T_DIV:
       op = OP_DIV
+    case ast.T_TIMESTIMES:
+      op = OP_POW
+    case ast.T_LTLT:
+      op = OP_SHL
+    case ast.T_GTGT:
+      op = OP_SHR
+    case ast.T_AMP:
+      op = OP_AND
+    case ast.T_PIPE:
+      op = OP_OR
+    case ast.T_TILDE:
+      op = OP_XOR
     case ast.T_LT, ast.T_GTEQ:
       op = OP_LT
     case ast.T_LTEQ, ast.T_GT:
@@ -501,7 +536,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     case ast.T_BANGEQ:
       op = OP_NEQ
     }
-    
+
     exprdata := exprdata{true, reg, 0}
     node.Left.Accept(c, &exprdata)
     left := exprdata.regb

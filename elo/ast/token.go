@@ -188,7 +188,7 @@ func Keyword(lit string) (Token, bool) {
 }
 
 func IsUnaryOp(tok Token) bool {
-  return (tok == T_NOT || tok == T_BANG || tok == T_MINUS || tok == T_PLUS)
+  return (tok == T_NOT || tok == T_BANG || tok == T_MINUS || tok == T_PLUS || tok == T_TILDE)
 }
 
 func IsBinaryOp(tok Token) bool {

@@ -44,7 +44,7 @@ type (
 
   Array struct {
     NodeInfo
-    Values []Node
+    Elements []Node
   }
 
   ObjectField struct {

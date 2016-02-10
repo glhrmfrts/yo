@@ -24,6 +24,7 @@ const (
   // This opcodes might be temporary, if the language turn out to be OO
   OP_NEGATE                 // set R(A) to -RK(Bx)
   OP_NOT                    // set R(A) to NOT RK(Bx)
+  OP_CMPL                   // set R(A) to ^RK(B)
 
   OP_ADD                    // set R(A) to RK(B) + RK(C)
   OP_SUB                    // set R(A) to RK(B) - RK(C)
@@ -35,7 +36,6 @@ const (
   OP_AND                    // set R(A) to RK(B) & RK(C)
   OP_OR                     // set R(A) to RK(B) | RK(C)
   OP_XOR                    // set R(A) to RK(B) ^ RK(C)
-  OP_CMPL                   // set R(A) to ^RK(B)
   OP_LT                     // set R(A) to RK(B) < RK(C)
   OP_LE                     // set R(A) to RK(B) <= RK(C)
   OP_EQ                     // set R(A) to RK(B) == RK(C)
@@ -43,6 +43,8 @@ const (
 
   OP_MOVE                   // set R(A) to R(B)
   OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]
+
+  OP_CALL                   // set R(A) ... R(A+B-1) to R(A)(R(A+B) ... R(A+B+C-1))
 
   OP_JMP                    // set pc to pc + Bx
   OP_JMPTRUE                // set pc to pc + Bx if R(A) is not false or nil
@@ -74,14 +76,27 @@ var (
 
     OP_NEGATE: "OP_NEGATE",
     OP_NOT: "OP_NOT",
+    OP_CMPL: "OP_CMPL",
 
     OP_ADD: "OP_ADD",
     OP_SUB: "OP_SUB",
     OP_MUL: "OP_MUL",
     OP_DIV: "OP_DIV",
+    OP_POW: "OP_POW",                 
+    OP_SHL: "OP_SHL",         
+    OP_SHR: "OP_SHR",        
+    OP_AND: "OP_AND",         
+    OP_OR: "OP_OR",         
+    OP_XOR: "OP_XOR",           
+    OP_LT: "OP_LT",         
+    OP_LE: "OP_LE",           
+    OP_EQ: "OP_EQ",           
+    OP_NEQ: "OP_NEQ",          
 
     OP_MOVE: "OP_MOVE",
     OP_LOADGLOBAL: "OP_LOADGLOBAL",
+
+    OP_CALL: "OP_CALL",
 
     OP_JMP: "OP_JMP",
     OP_JMPTRUE: "OP_JMPTRUE",

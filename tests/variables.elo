@@ -1,3 +1,3 @@
 // test variable assignment and declaration
 
-a > b
+make(getcap(2, 5), 2)

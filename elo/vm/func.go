@@ -59,7 +59,7 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
       buf.WriteString(fmt.Sprintf("!%d !%d", opGetA(instr), opGetB(instr)))
     case OP_LOADCONST:
       buf.WriteString(fmt.Sprintf("!%d %s", opGetA(instr), f.Consts[opGetBx(instr)]))
-    case OP_NEGATE, OP_NOT:
+    case OP_NEGATE, OP_NOT, OP_CMPL:
       bx := opGetBx(instr)
       var bstr string
       if bx >= kConstOffset {
@@ -68,7 +68,7 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
         bstr = fmt.Sprintf("!%d", bx)
       }
       buf.WriteString(fmt.Sprintf("\t!%d %s", opGetA(instr), bstr))
-    case OP_ADD, OP_SUB, OP_MUL, OP_DIV:
+    case OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW, OP_SHL, OP_SHR, OP_AND, OP_OR, OP_XOR, OP_LE, OP_LT, OP_EQ, OP_NEQ:
       a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       var bstr, cstr string
       if b >= kConstOffset {
@@ -88,6 +88,9 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
     case OP_LOADGLOBAL:
       a, bx := opGetA(instr), opGetBx(instr)
       buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
+    case OP_CALL:
+      a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
+      buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
     case OP_JMP:
       sbx := opGetsBx(instr)
       buf.WriteString(fmt.Sprintf("->%d", i + sbx))

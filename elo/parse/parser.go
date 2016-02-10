@@ -165,7 +165,7 @@ func (p *parser) array() ast.Node {
     p.errorExpected("closing ']'")
   }
 
-  return &ast.Array{Values: list, NodeInfo: ast.NodeInfo{line}}
+  return &ast.Array{Elements: list, NodeInfo: ast.NodeInfo{line}}
 }
 
 func (p *parser) objectFieldList() []*ast.ObjectField {

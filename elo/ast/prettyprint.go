@@ -50,7 +50,7 @@ func (p *prettyprinter) VisitArray(node *Array, data interface{}) {
   p.buf.WriteString("(array")
   p.indent++
 
-  for _, n := range node.Values {
+  for _, n := range node.Elements {
     p.buf.WriteString("\n")
     p.doIndent()
     n.Accept(p, nil)
