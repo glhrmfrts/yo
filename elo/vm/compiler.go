@@ -38,7 +38,7 @@ type (
   // lexical block structure for compiler
   compilerblock struct {
     context    blockcontext
-    registerId int
+    register int
     names      map[string]*nameinfo
     proto      *FuncProto
     parent     *compilerblock
@@ -147,10 +147,10 @@ func (c *compiler) modifyABx(index int, op Opcode, a, b int) bool {
   return c.modifyInstruction(index, opNewABx(op, a, b))
 }
 
-func (c *compiler) genRegisterId() int {
-  id := c.block.registerId
-  c.block.registerId++
-  fmt.Printf("genRegisterId: %d\n", id)
+func (c *compiler) genRegister() int {
+  id := c.block.register
+  c.block.register++
+  fmt.Printf("genRegister: %d\n", id)
   return id
 }
 
@@ -283,14 +283,14 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
   nameCount, valueCount := len(names), len(values)
   _, isCall := values[valueCount - 1].(*ast.CallExpr)
   _, isUnpack := values[valueCount - 1].(*ast.VarArg)
-  start := c.block.registerId
+  start := c.block.register
   end := start + nameCount - 1
   for i, id := range names {
     _, ok := c.block.names[id.Value]
     if ok {
       c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
     }
-    reg := c.genRegisterId()
+    reg := c.genRegister()
     c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
 
     exprdata := exprdata{false, reg, reg}
@@ -305,7 +305,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
         if ok {
           c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
         }
-        end = c.genRegisterId()
+        end = c.genRegister()
         c.block.addNameInfo(id.Value, &nameinfo{false, nil, end, kScopeLocal, c.block})
         rem++
       }
@@ -333,7 +333,7 @@ func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
       regb = rega
     }
   } else {
-    rega = c.genRegisterId()
+    rega = c.genRegister()
     regb = rega
   }
   c.emitAB(OP_LOADNIL, rega, regb, node.NodeInfo.Line)
@@ -349,7 +349,7 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
   } else if ok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
@@ -364,7 +364,7 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
   } else if ok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
@@ -379,7 +379,7 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
   } else if ok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
 }
@@ -389,7 +389,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   var scope scope = -1
   expr, exprok := data.(*exprdata)
   if !exprok {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   } else {
     reg = expr.rega
   }
@@ -443,7 +443,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
   if exprok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   objData := exprdata{true, reg + 1, reg + 1}
   node.Left.Accept(c, &objData)
@@ -462,7 +462,7 @@ func (c *compiler) VisitSubscript(node *ast.Subscript, data interface{}) {
   if exprok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   arrData := exprdata{true, reg + 1, reg + 1}
   node.Left.Accept(c, &arrData)
@@ -503,7 +503,7 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     startReg, endReg = expr.rega, expr.regb
     resultCount = endReg - startReg + 1
   } else {
-    startReg = c.genRegisterId()
+    startReg = c.genRegister()
     endReg = startReg
     resultCount = 1
   }
@@ -527,7 +527,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
   if exprok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   value, ok := c.constFold(node)
   if ok {
@@ -561,7 +561,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
   if exprok {
     reg = expr.rega
   } else {
-    reg = c.genRegisterId()
+    reg = c.genRegister()
   }
   value, ok := c.constFold(node)
   if ok {
@@ -689,7 +689,7 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
   varCount, valueCount := len(node.Left), len(node.Right)
   _, isCall := node.Right[valueCount - 1].(*ast.CallExpr)
   _, isUnpack := node.Right[valueCount - 1].(*ast.VarArg)
-  start := c.block.registerId
+  start := c.block.register
   current := start
   end := start + varCount - 1
 
@@ -779,7 +779,7 @@ func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
     stmt.Accept(c, nil)
 
     if !ast.IsStmt(stmt) {
-      c.block.registerId -= 1
+      c.block.register -= 1
     }
   }
 }

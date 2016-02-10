@@ -2,4 +2,4 @@
 
 getInfo := 2
 a, ok := getInfo()
-arr[2], a, ok = a[2]
+arr[2], a, ok = a[2], 6
