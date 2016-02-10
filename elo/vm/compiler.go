@@ -267,6 +267,8 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
       }
 
       switch t.Op {
+      case ast.T_PLUS:
+        return String(ls + rs), true
       case ast.T_EQEQ:
         return Bool(ls == rs), true
       case ast.T_BANGEQ:
