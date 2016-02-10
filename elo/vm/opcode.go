@@ -22,7 +22,7 @@ const (
   OP_LOADCONST              // set R(A) to K(Bx)
 
   // This opcodes might be temporary, if the language turn out to be OO
-  OP_NEGATE                 // set R(A) to -RK(Bx)
+  OP_NEG                    // set R(A) to -RK(Bx)
   OP_NOT                    // set R(A) to NOT RK(Bx)
   OP_CMPL                   // set R(A) to ^RK(B)
 
@@ -39,7 +39,7 @@ const (
   OP_LT                     // set R(A) to RK(B) < RK(C)
   OP_LE                     // set R(A) to RK(B) <= RK(C)
   OP_EQ                     // set R(A) to RK(B) == RK(C)
-  OP_NEQ                    // set R(A) to RK(B) != RK(C)
+  OP_NE                     // set R(A) to RK(B) != RK(C)
 
   OP_MOVE                   // set R(A) to R(B)
   OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]
@@ -74,7 +74,7 @@ var (
     OP_LOADNIL: "OP_LOADNIL",
     OP_LOADCONST: "OP_LOADCONST",
 
-    OP_NEGATE: "OP_NEGATE",
+    OP_NEG: "OP_NEG",
     OP_NOT: "OP_NOT",
     OP_CMPL: "OP_CMPL",
 
@@ -91,7 +91,7 @@ var (
     OP_LT: "OP_LT",         
     OP_LE: "OP_LE",           
     OP_EQ: "OP_EQ",           
-    OP_NEQ: "OP_NEQ",          
+    OP_NE: "OP_NE",          
 
     OP_MOVE: "OP_MOVE",
     OP_LOADGLOBAL: "OP_LOADGLOBAL",

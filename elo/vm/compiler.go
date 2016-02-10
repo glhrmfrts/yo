@@ -277,6 +277,52 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
   return nil, false
 }
 
+// declare local variables
+// assignments are done in sequence, since the registers are created as needed
+func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
+  nameCount, valueCount := len(names), len(values)
+  _, isCall := values[valueCount - 1].(*ast.CallExpr)
+  _, isUnpack := values[valueCount - 1].(*ast.VarArg)
+  start := c.block.registerId
+  end := start + nameCount
+  for i, id := range names {
+    _, ok := c.block.names[id.Value]
+    if ok {
+      c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
+    }
+    reg := c.genRegisterId()
+    exprdata := exprdata{false, reg, reg}
+    if i == valueCount - 1 && (isCall || isUnpack) {
+      // last expression receives all the remaining registers
+      // in case it's a function call with multiple return values
+      rem := i + 1
+      for rem < nameCount {
+        // reserve the registers
+        id := names[rem]
+        _, ok := c.block.names[id.Value]
+        if ok {
+          c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
+        }
+        end = c.genRegisterId()
+        c.block.addNameInfo(id.Value, &nameinfo{false, nil, end, kScopeLocal, c.block})
+        rem++
+      }
+      exprdata.regb, start = end, end
+      values[i].Accept(c, &exprdata)
+      break
+    }
+    if i < valueCount {
+      values[i].Accept(c, &exprdata)
+      start = reg + 1
+    }
+    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+  }
+  if end - 1 >= start {
+    // variables without initializer are set to nil
+    c.emitAB(OP_LOADNIL, start, end - 1, names[start].NodeInfo.Line)
+  }
+}
+
 func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   var rega, regb int
   expr, ok := data.(*exprdata)
@@ -454,7 +500,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     var op Opcode
     switch node.Op {
     case ast.T_MINUS:
-      op = OP_NEGATE
+      op = OP_NEG
     case ast.T_NOT, ast.T_BANG:
       op = OP_NOT
     case ast.T_TILDE:
@@ -534,7 +580,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     case ast.T_EQ:
       op = OP_EQ
     case ast.T_BANGEQ:
-      op = OP_NEQ
+      op = OP_NE
     }
 
     exprdata := exprdata{true, reg, 0}
@@ -567,14 +613,14 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
 // For consts declaration no code is generated, they are only kept
 // in the current block's local symbol table.
 func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
-  namesCount, valuesCount := len(node.Left), len(node.Right)
+  valueCount := len(node.Right)
   if node.IsConst {
     for i, id := range node.Left {
       _, ok := c.block.names[id.Value]
       if ok {
         c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
       }
-      if i >= valuesCount {
+      if i >= valueCount {
         c.error(node.NodeInfo.Line, fmt.Sprintf("const '%s' without initializer", id.Value))
       }
       value, ok := c.constFold(node.Right[i])
@@ -583,81 +629,23 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
       }
       c.block.addNameInfo(id.Value, &nameinfo{true, value, 0, kScopeLocal, c.block})
     }
-  } else {
-    // declare local variables
-    // TODO: multiple return values
-    if valuesCount + namesCount > 2 {
-      c.error(node.NodeInfo.Line, fmt.Sprintf("multiple variable declaration is not yet supported"))
-    }
-    start := c.block.registerId
-    end := start - 1
-    for i, id := range node.Left {
-      _, ok := c.block.names[id.Value]
-      if ok {
-        c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
-      }
-      reg := c.genRegisterId()
-      if i >= valuesCount {
-        end = reg
-      } else {
-        // load value into new register
-        exprdata := exprdata{false, reg, 0}
-        node.Right[i].Accept(c, &exprdata)
-        start = reg + 1
-      }
-      c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
-    }
-    if end >= start {
-      // variables without initializer are set to nil
-      c.emitAB(OP_LOADNIL, start, end, node.NodeInfo.Line)
-    }
+    return
   }
+  c.declare(node.Left, node.Right)
 }
 
 func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
-  namesCount, valuesCount := len(node.Left), len(node.Right)
-  if valuesCount + namesCount > 2 {
-    c.error(node.NodeInfo.Line, fmt.Sprintf("multiple assignment is not yet supported"))
-  }
-  value := node.Right[0]
   if node.Op == ast.T_COLONEQ {
     // short variable declaration
-    id := node.Left[0].(*ast.Id)
-    _, ok := c.block.names[id.Value]
-    if ok {
-      c.error(node.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
+    var names []*ast.Id
+    for _, id := range node.Left {
+      names = append(names, id.(*ast.Id))
     }
-    reg := c.genRegisterId()
-    exprdata := exprdata{false, reg, 0}
-    value.Accept(c, &exprdata)
-    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+    c.declare(names, node.Right)
     return
   }
   // regular assignment, if the left-side is an identifier
   // it has to be declared already
-  id, ok := node.Left[0].(*ast.Id)
-  if ok {
-    var scope scope
-    info, ok := c.block.names[id.Value]
-    if !ok {
-      scope = kScopeGlobal
-    } else {
-      scope = info.scope
-    }
-    switch scope {
-    case kScopeLocal:
-      exprdata := exprdata{false, info.reg, info.reg}
-      value.Accept(c, &exprdata)
-    case kScopeUpval, kScopeGlobal:
-      // temp register for the value
-      reg := c.block.registerId + 1
-      exprdata := exprdata{true, reg, reg}
-      value.Accept(c, &exprdata)
-      // c.emitABx(OP_SETGLOBAL, exprdata.regb, c.addConst(String(id.Value)), node.NodeInfo.Line)
-    }
-    return
-  }
-  // TODO: object key and array index assignment
 }
 
 func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
