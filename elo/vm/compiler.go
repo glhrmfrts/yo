@@ -645,7 +645,70 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
     return
   }
   // regular assignment, if the left-side is an identifier
-  // it has to be declared already
+  // then it has to be declared already
+  varCount, valueCount := len(node.Left), len(node.Right)
+  start := c.block.registerId
+  current := start
+  end := start + varCount
+
+  // evaluate all expressions first with temp registers
+  for i, variable := range node.Left {
+    reg = start + i
+    exprdata := exprdata{false, reg, reg}
+    if i == valuesCount - 1 && (isCall || isUnpack) {
+      exprdata.regb, current = end, end
+      node.Right[i].Accept(c, &exprdata)
+      break
+    }
+    if i < valueCount {
+      node.Right[i].Accept(c, &exprdata)
+      current = reg + 1
+    }
+  }
+
+  // fill remaining registers
+  if end - 1 >= current {
+    c.emitABx(OP_LOADNIL, current, end - 1, node.NodeInfo.Line)
+  }
+
+  // assign the results to the variables
+  for i, variable := range node.Left {
+    valueReg := start + i
+    id, ok := variable.(*ast.Id)
+    if ok {
+      info, ok := c.block.names[id.Value]
+      if !ok {
+        c.error(id.NodeInfo.Line, fmt.Sprintf("undefined '%s'", id.Value))
+      }
+      switch info.scope {
+      case kScopeLocal:
+        c.emitAB(OP_MOVE, info.reg, valueReg, id.NodeInfo.Line)
+      }
+      continue
+    }
+    subs, ok := variable.(*ast.Subscript)
+    if ok {
+      arrData := exprdata{true, end + 1, end + 1}
+      subs.Left.Accept(c, &arrData)
+      arrReg := arrData.regb
+
+      subData := exprdata{true, end + 1, end + 1}
+      subs.Right.Accept(c, &subData)
+      subReg := subData.regb
+
+      c.emitABC(OP_SETINDEX, arrReg, subReg, valueReg, subs.NodeInfo.Line)
+      continue
+    }
+    selector, ok := variable.(*ast.Selector)
+    if ok {
+      objData := exprdata{true, end + 1, end + 1}
+      selector.Left.Accept(c, &objData)
+      objReg := objData.regb
+      key := kConstOffset + c.addConst(String(selector.Key))
+
+      c.emitABC(OP_SETINDEX, objReg, key, valueReg, selector.NodeInfo.Line)
+    }
+  }
 }
 
 func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
