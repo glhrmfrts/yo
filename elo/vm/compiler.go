@@ -284,13 +284,15 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
   _, isCall := values[valueCount - 1].(*ast.CallExpr)
   _, isUnpack := values[valueCount - 1].(*ast.VarArg)
   start := c.block.registerId
-  end := start + nameCount
+  end := start + nameCount - 1
   for i, id := range names {
     _, ok := c.block.names[id.Value]
     if ok {
       c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
     }
     reg := c.genRegisterId()
+    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+
     exprdata := exprdata{false, reg, reg}
     if i == valueCount - 1 && (isCall || isUnpack) {
       // last expression receives all the remaining registers
@@ -307,7 +309,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
         c.block.addNameInfo(id.Value, &nameinfo{false, nil, end, kScopeLocal, c.block})
         rem++
       }
-      exprdata.regb, start = end, end
+      exprdata.regb, start = end, end + 1
       values[i].Accept(c, &exprdata)
       break
     }
@@ -315,11 +317,10 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
       values[i].Accept(c, &exprdata)
       start = reg + 1
     }
-    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
   }
-  if end - 1 >= start {
+  if end >= start {
     // variables without initializer are set to nil
-    c.emitAB(OP_LOADNIL, start, end - 1, names[start].NodeInfo.Line)
+    c.emitAB(OP_LOADNIL, start, end, names[start].NodeInfo.Line)
   }
 }
 
@@ -437,11 +438,50 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
 }
 
 func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
- 
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
+  }
+  objData := exprdata{true, reg + 1, reg + 1}
+  node.Left.Accept(c, &objData)
+  objReg := objData.regb
+
+  key := kConstOffset + c.addConst(String(node.Value))
+  c.emitABC(OP_GET, reg, objReg, key, node.NodeInfo.Line)
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitSubscript(node *ast.Subscript, data interface{}) {
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegisterId()
+  }
+  arrData := exprdata{true, reg + 1, reg + 1}
+  node.Left.Accept(c, &arrData)
+  arrReg := arrData.regb
 
+  _, ok := node.Right.(*ast.Slice)
+  if ok {
+    // TODO: generate code for slice
+    return
+  }
+
+  indexData := exprdata{true, reg + 1, reg + 1}
+  node.Right.Accept(c, &indexData)
+  indexReg := indexData.regb
+  c.emitABC(OP_GET, reg, arrReg, indexReg, node.NodeInfo.Line)
+
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitSlice(node *ast.Slice, data interface{}) {
@@ -467,7 +507,7 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     endReg = startReg
     resultCount = 1
   }
-  callerData := exprdata{true, startReg, startReg}
+  callerData := exprdata{false, startReg, startReg}
   node.Left.Accept(c, &callerData)
   callerReg := callerData.regb
   assert(startReg == callerReg)
@@ -647,15 +687,17 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
   // regular assignment, if the left-side is an identifier
   // then it has to be declared already
   varCount, valueCount := len(node.Left), len(node.Right)
+  _, isCall := node.Right[valueCount - 1].(*ast.CallExpr)
+  _, isUnpack := node.Right[valueCount - 1].(*ast.VarArg)
   start := c.block.registerId
   current := start
-  end := start + varCount
+  end := start + varCount - 1
 
   // evaluate all expressions first with temp registers
-  for i, variable := range node.Left {
-    reg = start + i
+  for i, _ := range node.Left {
+    reg := start + i
     exprdata := exprdata{false, reg, reg}
-    if i == valuesCount - 1 && (isCall || isUnpack) {
+    if i == valueCount - 1 && (isCall || isUnpack) {
       exprdata.regb, current = end, end
       node.Right[i].Accept(c, &exprdata)
       break
@@ -666,14 +708,15 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
     }
   }
 
-  // fill remaining registers
-  if end - 1 >= current {
-    c.emitABx(OP_LOADNIL, current, end - 1, node.NodeInfo.Line)
-  }
-
   // assign the results to the variables
   for i, variable := range node.Left {
     valueReg := start + i
+
+    // don't touch variables without a corresponding value
+    if valueReg >= current {
+      break
+    }
+
     id, ok := variable.(*ast.Id)
     if ok {
       info, ok := c.block.names[id.Value]
@@ -688,25 +731,25 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
     }
     subs, ok := variable.(*ast.Subscript)
     if ok {
-      arrData := exprdata{true, end + 1, end + 1}
+      arrData := exprdata{true, current + 1, current + 1}
       subs.Left.Accept(c, &arrData)
       arrReg := arrData.regb
 
-      subData := exprdata{true, end + 1, end + 1}
+      subData := exprdata{true, current + 1, current + 1}
       subs.Right.Accept(c, &subData)
       subReg := subData.regb
 
-      c.emitABC(OP_SETINDEX, arrReg, subReg, valueReg, subs.NodeInfo.Line)
+      c.emitABC(OP_SET, arrReg, subReg, valueReg, subs.NodeInfo.Line)
       continue
     }
     selector, ok := variable.(*ast.Selector)
     if ok {
-      objData := exprdata{true, end + 1, end + 1}
+      objData := exprdata{true, current + 1, current + 1}
       selector.Left.Accept(c, &objData)
       objReg := objData.regb
-      key := kConstOffset + c.addConst(String(selector.Key))
+      key := kConstOffset + c.addConst(String(selector.Value))
 
-      c.emitABC(OP_SETINDEX, objReg, key, valueReg, selector.NodeInfo.Line)
+      c.emitABC(OP_SET, objReg, key, valueReg, selector.NodeInfo.Line)
     }
   }
 }

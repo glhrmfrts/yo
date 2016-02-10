@@ -18,37 +18,39 @@ package vm
 type Opcode uint
 
 const (
-  OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) to nil
-  OP_LOADCONST              // set R(A) to K(Bx)
+  OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) = nil
+  OP_LOADCONST              // set R(A) = K(Bx)
+  OP_LOADGLOBAL             // set R(A) = globals[K(Bx)]
 
   // This opcodes might be temporary, if the language turn out to be OO
-  OP_NEG                    // set R(A) to -RK(Bx)
-  OP_NOT                    // set R(A) to NOT RK(Bx)
-  OP_CMPL                   // set R(A) to ^RK(B)
+  OP_NEG                    // set R(A) = -RK(Bx)
+  OP_NOT                    // set R(A) = NOT RK(Bx)
+  OP_CMPL                   // set R(A) = ^RK(B)
 
-  OP_ADD                    // set R(A) to RK(B) + RK(C)
-  OP_SUB                    // set R(A) to RK(B) - RK(C)
-  OP_MUL                    // set R(A) to RK(B) * RK(C)
-  OP_DIV                    // set R(A) to RK(B) / RK(C)
-  OP_POW                    // set R(A) to pow(RK(B), RK(C))
-  OP_SHL                    // set R(A) to RK(B) << RK(C)
-  OP_SHR                    // set R(A) to RK(B) >> RK(C)
-  OP_AND                    // set R(A) to RK(B) & RK(C)
-  OP_OR                     // set R(A) to RK(B) | RK(C)
-  OP_XOR                    // set R(A) to RK(B) ^ RK(C)
-  OP_LT                     // set R(A) to RK(B) < RK(C)
-  OP_LE                     // set R(A) to RK(B) <= RK(C)
-  OP_EQ                     // set R(A) to RK(B) == RK(C)
-  OP_NE                     // set R(A) to RK(B) != RK(C)
+  OP_ADD                    // set R(A) = RK(B) + RK(C)
+  OP_SUB                    // set R(A) = RK(B) - RK(C)
+  OP_MUL                    // set R(A) = RK(B) * RK(C)
+  OP_DIV                    // set R(A) = RK(B) / RK(C)
+  OP_POW                    // set R(A) = pow(RK(B), RK(C))
+  OP_SHL                    // set R(A) = RK(B) << RK(C)
+  OP_SHR                    // set R(A) = RK(B) >> RK(C)
+  OP_AND                    // set R(A) = RK(B) & RK(C)
+  OP_OR                     // set R(A) = RK(B) | RK(C)
+  OP_XOR                    // set R(A) = RK(B) ^ RK(C)
+  OP_LT                     // set R(A) = RK(B) < RK(C)
+  OP_LE                     // set R(A) = RK(B) <= RK(C)
+  OP_EQ                     // set R(A) = RK(B) == RK(C)
+  OP_NE                     // set R(A) = RK(B) != RK(C)
 
-  OP_MOVE                   // set R(A) to R(B)
-  OP_LOADGLOBAL             // set R(A) to globals[K(Bx)]
+  OP_MOVE                   // set R(A) = R(B)
+  OP_GET                    // set R(A) = R(B)[RK(C)]
+  OP_SET                    // set R(A)[RK(B)] = RK(C)
 
-  OP_CALL                   // set R(A) ... R(A+B-1) to R(A)(R(A+B) ... R(A+B+C-1))
+  OP_CALL                   // set R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
 
-  OP_JMP                    // set pc to pc + Bx
-  OP_JMPTRUE                // set pc to pc + Bx if R(A) is not false or nil
-  OP_JMPFALSE               // set pc to pc + Bx if R(A) is false or nil
+  OP_JMP                    // set pc = pc + Bx
+  OP_JMPTRUE                // set pc = pc + Bx if R(A) is not false or nil
+  OP_JMPFALSE               // set pc = pc + Bx if R(A) is false or nil
 )
 
 // instruction parameters
@@ -71,36 +73,38 @@ const (
 
 var (
   opStrings = map[Opcode]string{
-    OP_LOADNIL: "OP_LOADNIL",
-    OP_LOADCONST: "OP_LOADCONST",
+    OP_LOADNIL: "LOADNIL",
+    OP_LOADCONST: "LOADCONST",
+    OP_LOADGLOBAL: "LOADGLOBAL",
 
-    OP_NEG: "OP_NEG",
-    OP_NOT: "OP_NOT",
-    OP_CMPL: "OP_CMPL",
+    OP_NEG: "NEG",
+    OP_NOT: "NOT",
+    OP_CMPL: "CMPL",
 
-    OP_ADD: "OP_ADD",
-    OP_SUB: "OP_SUB",
-    OP_MUL: "OP_MUL",
-    OP_DIV: "OP_DIV",
-    OP_POW: "OP_POW",                 
-    OP_SHL: "OP_SHL",         
-    OP_SHR: "OP_SHR",        
-    OP_AND: "OP_AND",         
-    OP_OR: "OP_OR",         
-    OP_XOR: "OP_XOR",           
-    OP_LT: "OP_LT",         
-    OP_LE: "OP_LE",           
-    OP_EQ: "OP_EQ",           
-    OP_NE: "OP_NE",          
+    OP_ADD: "ADD",
+    OP_SUB: "SUB",
+    OP_MUL: "MUL",
+    OP_DIV: "DIV",
+    OP_POW: "POW",                 
+    OP_SHL: "SHL",         
+    OP_SHR: "SHR",        
+    OP_AND: "AND",         
+    OP_OR: "OR",         
+    OP_XOR: "XOR",           
+    OP_LT: "LT",         
+    OP_LE: "LE",           
+    OP_EQ: "EQ",           
+    OP_NE: "NE",          
 
-    OP_MOVE: "OP_MOVE",
-    OP_LOADGLOBAL: "OP_LOADGLOBAL",
+    OP_MOVE: "MOVE",
+    OP_GET: "GET",
+    OP_SET: "SET",
 
-    OP_CALL: "OP_CALL",
+    OP_CALL: "CALL",
 
-    OP_JMP: "OP_JMP",
-    OP_JMPTRUE: "OP_JMPTRUE",
-    OP_JMPFALSE: "OP_JMPFALSE",
+    OP_JMP: "JMP",
+    OP_JMPTRUE: "JMPTRUE",
+    OP_JMPFALSE: "JMPFALSE",
   }
 )
 

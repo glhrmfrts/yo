@@ -1,3 +1,5 @@
 // test variable assignment and declaration
 
-var a, b = make(2, 'a'), 1
+getInfo := 2
+a, ok := getInfo()
+arr[2], a, ok = a[2]

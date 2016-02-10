@@ -68,7 +68,8 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
         bstr = fmt.Sprintf("!%d", bx)
       }
       buf.WriteString(fmt.Sprintf("\t!%d %s", opGetA(instr), bstr))
-    case OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW, OP_SHL, OP_SHR, OP_AND, OP_OR, OP_XOR, OP_LE, OP_LT, OP_EQ, OP_NE:
+    case OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW, OP_SHL, OP_SHR, 
+        OP_AND, OP_OR, OP_XOR, OP_LE, OP_LT, OP_EQ, OP_NE, OP_GET, OP_SET:
       a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       var bstr, cstr string
       if b >= kConstOffset {
