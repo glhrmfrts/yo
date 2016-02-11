@@ -2,8 +2,7 @@ package vm
 
 // vm instruction details and implementation.
 //
-// The instruction design is different from the usual,
-// the arguments comes first and the opcode comes last
+// The arguments comes first and the opcode comes last
 // in the bits, e.g.:
 //
 // 9 | 9 | 8 | 6
@@ -73,10 +72,10 @@ const (
 
   kArgBOffset = kOpcodeSize + kArgASize
   kArgCOffset = kArgBOffset + kArgBCSize
-
-  // offset for RK
-  kConstOffset = 250
 )
+
+// offset for RK
+const OpConstOffset = 250
 
 var (
   opStrings = map[Opcode]string{
@@ -130,46 +129,46 @@ func (op Opcode) String() string {
 
 // Instruction constructors.
 
-func opNew(op Opcode) uint32 {
+func OpNew(op Opcode) uint32 {
   return uint32(op & kOpcodeMask)
 }
 
-func opNewA(op Opcode, a int) uint32 {
+func OpNewA(op Opcode, a int) uint32 {
   return uint32((a & kArgAMask) << kOpcodeSize | (int(op) & kOpcodeMask))
 }
 
-func opNewAB(op Opcode, a, b int) uint32 {
+func OpNewAB(op Opcode, a, b int) uint32 {
   return uint32(((b & kArgBCMask) << kArgBOffset) | ((a & kArgAMask) << kOpcodeSize) | (int(op) & kOpcodeMask))
 }
 
-func opNewABC(op Opcode, a, b, c int) uint32 {
+func OpNewABC(op Opcode, a, b, c int) uint32 {
   return uint32(((c & kArgBCMask) << kArgCOffset) | ((b & kArgBCMask) << kArgBOffset) | ((a & kArgAMask) << kOpcodeSize) | (int(op) & kOpcodeMask))
 }
 
-func opNewABx(op Opcode, a, b int) uint32 {
+func OpNewABx(op Opcode, a, b int) uint32 {
   return uint32(((b & kArgBxMask) << kArgBOffset) | ((a & kArgAMask) << kOpcodeSize) | (int(op) & kOpcodeMask))
 }
 
-func opGetOpcode(instr uint32) Opcode {
+func OpGetOpcode(instr uint32) Opcode {
   return Opcode(instr & kOpcodeMask)
 }
 
-func opGetA(instr uint32) uint {
+func OpGetA(instr uint32) uint {
   return uint((instr >> kOpcodeSize) & kArgAMask)
 }
 
-func opGetB(instr uint32) uint {
+func OpGetB(instr uint32) uint {
   return uint((instr >> kArgBOffset) & kArgBCMask)
 }
 
-func opGetC(instr uint32) uint {
+func OpGetC(instr uint32) uint {
   return uint((instr >> kArgCOffset) & kArgBCMask)
 }
 
-func opGetBx(instr uint32) uint {
+func OpGetBx(instr uint32) uint {
   return uint((instr >> kArgBOffset) & kArgBxMask)
 }
 
-func opGetsBx(instr uint32) int {
+func OpGetsBx(instr uint32) int {
   return int((instr >> kArgBOffset) & kArgBxMask) 
 }

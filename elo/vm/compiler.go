@@ -136,19 +136,19 @@ func (c *compiler) modifyInstruction(index int, instr uint32) bool {
 }
 
 func (c *compiler) emitAB(op Opcode, a, b, line int) int {
-  return c.emitInstruction(opNewAB(op, a, b), line)
+  return c.emitInstruction(OpNewAB(op, a, b), line)
 }
 
 func (cc *compiler) emitABC(op Opcode, a, b, c, line int) int {
-  return cc.emitInstruction(opNewABC(op, a, b, c), line)
+  return cc.emitInstruction(OpNewABC(op, a, b, c), line)
 }
 
 func (c *compiler) emitABx(op Opcode, a, b, line int) int {
-  return c.emitInstruction(opNewABx(op, a, b), line)
+  return c.emitInstruction(OpNewABx(op, a, b), line)
 }
 
 func (c *compiler) modifyABx(index int, op Opcode, a, b int) bool {
-  return c.modifyInstruction(index, opNewABx(op, a, b))
+  return c.modifyInstruction(index, OpNewABx(op, a, b))
 }
 
 func (c *compiler) genRegister() int {
@@ -366,7 +366,7 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
     objData := exprdata{true, assignReg + 1, assignReg + 1}
     v.Left.Accept(c, &objData)
     objReg := objData.regb
-    key := kConstOffset + c.addConst(String(v.Value))
+    key := OpConstOffset + c.addConst(String(v.Value))
 
     c.emitABC(OP_SET, objReg, key, valueReg, v.NodeInfo.Line)
   }
@@ -392,7 +392,7 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
   value := Bool(node.Value)
   expr, ok := data.(*exprdata)
   if ok && expr.propagate {
-    expr.regb = kConstOffset + c.addConst(value)
+    expr.regb = OpConstOffset + c.addConst(value)
     return
   } else if ok {
     reg = expr.rega
@@ -407,7 +407,7 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
   value := Number(node.Value)
   expr, ok := data.(*exprdata)
   if ok && expr.propagate {
-    expr.regb = kConstOffset + c.addConst(value)
+    expr.regb = OpConstOffset + c.addConst(value)
     return
   } else if ok {
     reg = expr.rega
@@ -422,7 +422,7 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
   value := String(node.Value)
   expr, ok := data.(*exprdata)
   if ok && expr.propagate {
-    expr.regb = kConstOffset + c.addConst(value)
+    expr.regb = OpConstOffset + c.addConst(value)
     return
   } else if ok {
     reg = expr.rega
@@ -444,7 +444,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   info, ok := c.block.nameInfo(node.Value)
   if ok && info.isConst {
     if exprok && expr.propagate {
-      expr.regb = kConstOffset + c.addConst(info.value)
+      expr.regb = OpConstOffset + c.addConst(info.value)
       return
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(info.value), node.NodeInfo.Line)
@@ -507,7 +507,7 @@ func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
   expr, exprok := data.(*exprdata)
   assert(exprok, "ObjectField exprok")
   objreg := expr.rega
-  key := kConstOffset + c.addConst(String(node.Key))
+  key := OpConstOffset + c.addConst(String(node.Key))
 
   valueData := exprdata{true, objreg + 1, objreg + 1}
   node.Value.Accept(c, &valueData)
@@ -586,7 +586,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
   node.Left.Accept(c, &objData)
   objReg := objData.regb
 
-  key := kConstOffset + c.addConst(String(node.Value))
+  key := OpConstOffset + c.addConst(String(node.Value))
   c.emitABC(OP_GET, reg, objReg, key, node.NodeInfo.Line)
   if exprok && expr.propagate {
     expr.regb = reg
@@ -669,7 +669,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
   value, ok := c.constFold(node)
   if ok {
     if exprok && expr.propagate {
-      expr.regb = kConstOffset + c.addConst(value)
+      expr.regb = OpConstOffset + c.addConst(value)
       return
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
@@ -703,7 +703,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
   value, ok := c.constFold(node)
   if ok {
     if exprok && expr.propagate {
-      expr.regb = kConstOffset + c.addConst(value)
+      expr.regb = OpConstOffset + c.addConst(value)
       return
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
@@ -886,7 +886,7 @@ func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
   }
 }
 
-// Compile receives the root node of the AST and generates code 
+// Compile receives the root node of the AST and generates code
 // for the "main" function from it.
 // Any type of Node is accepted, either a block representing the program
 // or a single expression.

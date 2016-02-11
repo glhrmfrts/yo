@@ -1,11 +1,11 @@
 // Pretty-print the AST to a buffer
 
-package ast
+package pretty
 
 import (
   "fmt"
   "bytes"
-  //"github.com/glhrmfrts/elo-lang/elo/token"
+  "github.com/glhrmfrts/elo-lang/elo/ast"
 )
 
 type prettyprinter struct {
@@ -20,11 +20,11 @@ func (p *prettyprinter) doIndent() {
   }
 }
 
-func (p *prettyprinter) VisitNil(node *Nil, data interface{}) {
+func (p *prettyprinter) VisitNil(node *ast.Nil, data interface{}) {
   p.buf.WriteString("(nil)")
 }
 
-func (p *prettyprinter) VisitBool(node *Bool, data interface{}) {
+func (p *prettyprinter) VisitBool(node *ast.Bool, data interface{}) {
   var val string
   if node.Value {
     val = "true"
@@ -34,19 +34,19 @@ func (p *prettyprinter) VisitBool(node *Bool, data interface{}) {
   p.buf.WriteString("(" + val + ")")
 }
 
-func (p *prettyprinter) VisitNumber(node *Number, data interface{}) {
+func (p *prettyprinter) VisitNumber(node *ast.Number, data interface{}) {
   p.buf.WriteString(fmt.Sprintf("(number %f)", node.Value))
 }
 
-func (p *prettyprinter) VisitId(node *Id, data interface{}) {
+func (p *prettyprinter) VisitId(node *ast.Id, data interface{}) {
   p.buf.WriteString("(id " + node.Value + ")")
 }
 
-func (p *prettyprinter) VisitString(node *String, data interface{}) {
+func (p *prettyprinter) VisitString(node *ast.String, data interface{}) {
   p.buf.WriteString("(string \""+ node.Value + "\")")
 }
 
-func (p *prettyprinter) VisitArray(node *Array, data interface{}) {
+func (p *prettyprinter) VisitArray(node *ast.Array, data interface{}) {
   p.buf.WriteString("(array")
   p.indent++
 
@@ -60,7 +60,7 @@ func (p *prettyprinter) VisitArray(node *Array, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitObjectField(node *ObjectField, data interface{}) {
+func (p *prettyprinter) VisitObjectField(node *ast.ObjectField, data interface{}) {
   p.buf.WriteString("(field\n")
   p.indent++
   p.doIndent()
@@ -77,7 +77,7 @@ func (p *prettyprinter) VisitObjectField(node *ObjectField, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitObject(node *Object, data interface{}) {
+func (p *prettyprinter) VisitObject(node *ast.Object, data interface{}) {
   p.buf.WriteString("(object")
   p.indent++
 
@@ -91,7 +91,7 @@ func (p *prettyprinter) VisitObject(node *Object, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitFunction(node *Function, data interface{}) {
+func (p *prettyprinter) VisitFunction(node *ast.Function, data interface{}) {
   p.buf.WriteString("(func ")
   if node.Name != nil {
     node.Name.Accept(p, nil)
@@ -115,7 +115,7 @@ func (p *prettyprinter) VisitFunction(node *Function, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitSelector(node *Selector, data interface{}) {
+func (p *prettyprinter) VisitSelector(node *ast.Selector, data interface{}) {
   p.buf.WriteString("(selector\n")
 
   p.indent++
@@ -130,7 +130,7 @@ func (p *prettyprinter) VisitSelector(node *Selector, data interface{}) {
   p.buf.WriteString("'" + node.Value + "')")
 }
 
-func (p *prettyprinter) VisitSubscript(node *Subscript, data interface{}) {
+func (p *prettyprinter) VisitSubscript(node *ast.Subscript, data interface{}) {
   p.buf.WriteString("(subscript\n")
 
   p.indent++
@@ -147,7 +147,7 @@ func (p *prettyprinter) VisitSubscript(node *Subscript, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitSlice(node *Slice, data interface{}) {
+func (p *prettyprinter) VisitSlice(node *ast.Slice, data interface{}) {
   p.buf.WriteString("(slice\n")
 
   p.indent++
@@ -164,7 +164,7 @@ func (p *prettyprinter) VisitSlice(node *Slice, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitKwArg(node *KwArg, data interface{}) {
+func (p *prettyprinter) VisitKwArg(node *ast.KwArg, data interface{}) {
   p.buf.WriteString("(kwarg\n")
 
   p.indent++
@@ -179,13 +179,13 @@ func (p *prettyprinter) VisitKwArg(node *KwArg, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitVarArg(node *VarArg, data interface{}) {
+func (p *prettyprinter) VisitVarArg(node *ast.VarArg, data interface{}) {
   p.buf.WriteString("(vararg ")
   node.Arg.Accept(p, nil)
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitCallExpr(node *CallExpr, data interface{}) {
+func (p *prettyprinter) VisitCallExpr(node *ast.CallExpr, data interface{}) {
   p.buf.WriteString("(call\n")
   p.indent++
   p.doIndent()
@@ -202,7 +202,7 @@ func (p *prettyprinter) VisitCallExpr(node *CallExpr, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitUnaryExpr(node *UnaryExpr, data interface{}) {
+func (p *prettyprinter) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
   p.buf.WriteString(fmt.Sprintf("(unary %s\n", node.Op))
   
   p.indent++
@@ -214,7 +214,7 @@ func (p *prettyprinter) VisitUnaryExpr(node *UnaryExpr, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitBinaryExpr(node *BinaryExpr, data interface{}) {
+func (p *prettyprinter) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
   p.buf.WriteString(fmt.Sprintf("(binary %s\n", node.Op))
 
   p.indent++
@@ -231,7 +231,7 @@ func (p *prettyprinter) VisitBinaryExpr(node *BinaryExpr, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitTernaryExpr(node *TernaryExpr, data interface{}) {
+func (p *prettyprinter) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
   p.buf.WriteString("(ternary\n")
   p.indent++
   p.doIndent()
@@ -256,7 +256,7 @@ func (p *prettyprinter) VisitTernaryExpr(node *TernaryExpr, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitDeclaration(node *Declaration, data interface{}) {
+func (p *prettyprinter) VisitDeclaration(node *ast.Declaration, data interface{}) {
   keyword := "var"
   if node.IsConst {
     keyword = "const"
@@ -285,7 +285,7 @@ func (p *prettyprinter) VisitDeclaration(node *Declaration, data interface{}) {
   p.buf.WriteString(")") 
 }
 
-func (p *prettyprinter) VisitAssignment(node *Assignment, data interface{}) {
+func (p *prettyprinter) VisitAssignment(node *ast.Assignment, data interface{}) {
   p.buf.WriteString("(assignment")
   p.indent++
 
@@ -309,11 +309,11 @@ func (p *prettyprinter) VisitAssignment(node *Assignment, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitBranchStmt(node *BranchStmt, data interface{}) {
+func (p *prettyprinter) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
   p.buf.WriteString(fmt.Sprintf("(%s)", node.Type))
 }
 
-func (p *prettyprinter) VisitReturnStmt(node *ReturnStmt, data interface{}) {
+func (p *prettyprinter) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) {
   p.buf.WriteString("(return")
   p.indent++
 
@@ -327,7 +327,7 @@ func (p *prettyprinter) VisitReturnStmt(node *ReturnStmt, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitIfStmt(node *IfStmt, data interface{}) {
+func (p *prettyprinter) VisitIfStmt(node *ast.IfStmt, data interface{}) {
   p.buf.WriteString("(if\n")
   p.indent++
   
@@ -354,7 +354,7 @@ func (p *prettyprinter) VisitIfStmt(node *IfStmt, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt, data interface{}) {
+func (p *prettyprinter) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interface{}) {
   p.buf.WriteString("(for iterator\n")
   p.indent++
   p.doIndent()
@@ -372,7 +372,7 @@ func (p *prettyprinter) VisitForIteratorStmt(node *ForIteratorStmt, data interfa
   p.buf.WriteString("\n")
 }
 
-func (p *prettyprinter) VisitForStmt(node *ForStmt, data interface{}) {
+func (p *prettyprinter) VisitForStmt(node *ast.ForStmt, data interface{}) {
   p.buf.WriteString("(for\n")
   p.indent++
 
@@ -400,7 +400,7 @@ func (p *prettyprinter) VisitForStmt(node *ForStmt, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func (p *prettyprinter) VisitBlock(node *Block, data interface{}) {
+func (p *prettyprinter) VisitBlock(node *ast.Block, data interface{}) {
   p.buf.WriteString("(block")
   p.indent++
 
@@ -414,7 +414,7 @@ func (p *prettyprinter) VisitBlock(node *Block, data interface{}) {
   p.buf.WriteString(")")
 }
 
-func Prettyprint(root Node, indentSize int) string {
+func SyntaxTree(root ast.Node, indentSize int) string {
   v := prettyprinter{indentSize: indentSize}
   root.Accept(&v, nil)
   return v.buf.String()

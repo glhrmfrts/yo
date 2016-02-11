@@ -3,10 +3,9 @@ package main
 import (
   "fmt"
   "os"
-  "bytes"
   "io/ioutil"
 	"github.com/glhrmfrts/elo-lang/elo/parse"
-  "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/elo/pretty"
   "github.com/glhrmfrts/elo-lang/elo/vm"
 )
 
@@ -23,8 +22,7 @@ func main() {
     return
   }
 
-  out := ast.Prettyprint(root, 2)
-  fmt.Println(out)
+  fmt.Println(pretty.SyntaxTree(root, 2))
 
   code, err := vm.Compile(root, filename)
   if err != nil {
@@ -32,7 +30,5 @@ func main() {
     return
   }
 
-  buf := new(bytes.Buffer)
-  vm.Disasm(code, buf)
-  fmt.Println(buf.String())
+  fmt.Println(pretty.Disasm(code))
 }
