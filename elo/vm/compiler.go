@@ -427,7 +427,35 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
 }
 
 func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegister()
+  }
+  length := len(node.Elements)
+  c.emitABx(OP_ARRAY, reg, length, node.NodeInfo.Line)
 
+  times := length / kArrayMaxRegisters + 1
+  for t := 0; t < times; t++ {
+    start, end := t * kArrayMaxRegisters, (t+1) * kArrayMaxRegisters
+    end = int(math.Min(float64(end - start), float64(length - start)))
+    if end == 0 {
+      break
+    }
+    for i := 0; i < end; i++ {
+      el := node.Elements[start + i]
+      exprdata := exprdata{false, reg + i + 3, reg + i + 3}
+      el.Accept(c, &exprdata)
+    }
+    c.emitABx(OP_LOADCONST, reg + 1, c.addConst(Number(start)), node.NodeInfo.Line)
+    c.emitABx(OP_LOADCONST, reg + 2, c.addConst(Number(start + end)), node.NodeInfo.Line)
+    c.emitABx(OP_SETSLICE, reg, end, node.NodeInfo.Line)
+  }
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
@@ -515,7 +543,7 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
   callerData := exprdata{false, startReg, startReg}
   node.Left.Accept(c, &callerData)
   callerReg := callerData.regb
-  assert(startReg == callerReg)
+  assert(startReg == callerReg, "startReg == callerReg")
 
   for i, arg := range node.Args {
     reg := endReg + i + 1

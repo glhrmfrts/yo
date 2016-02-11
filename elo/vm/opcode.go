@@ -45,8 +45,10 @@ const (
   OP_MOVE                   // set R(A) = R(B)
   OP_GET                    // set R(A) = R(B)[RK(C)]
   OP_SET                    // set R(A)[RK(B)] = RK(C)
+  OP_SETSLICE               // set R(A)[R(A+1):R(A+2)] = R(A+3) ... R(A+Bx+2)
 
   OP_CALL                   // set R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
+  OP_ARRAY                  // set R(A) = [] (len, cap = Bx)
 
   OP_JMP                    // set pc = pc + Bx
   OP_JMPTRUE                // set pc = pc + Bx if R(A) is not false or nil
@@ -69,6 +71,9 @@ const (
 
   // offset for RK
   kConstOffset = 250
+
+  // how much registers an array can use to set it's values
+  kArrayMaxRegisters = 10
 )
 
 var (
@@ -99,8 +104,10 @@ var (
     OP_MOVE: "MOVE",
     OP_GET: "GET",
     OP_SET: "SET",
+    OP_SETSLICE: "SETSLICE",
 
     OP_CALL: "CALL",
+    OP_ARRAY: "ARRAY",
 
     OP_JMP: "JMP",
     OP_JMPTRUE: "JMPTRUE",

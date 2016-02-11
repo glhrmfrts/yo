@@ -1,7 +1,13 @@
 package vm
 
-func assert(cond bool) {
+import (
+  "fmt"
+  "os"
+)
+
+func assert(cond bool, msg string) {
   if !cond {
-    panic("assertion failed")
+    fmt.Printf("assertion failed: %s\n", msg)
+    os.Exit(1)
   }
 }
