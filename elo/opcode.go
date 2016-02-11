@@ -1,4 +1,4 @@
-package vm
+package elo
 
 // vm instruction details and implementation.
 //

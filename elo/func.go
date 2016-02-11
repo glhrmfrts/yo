@@ -1,4 +1,4 @@
-package vm
+package elo
 
 
 type LineInfo struct {
