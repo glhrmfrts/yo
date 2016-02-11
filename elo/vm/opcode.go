@@ -55,8 +55,8 @@ const (
   OP_FUNC                   //  R(A) = func() { proto = funcs[Bx] }
 
   OP_JMP                    //  pc = pc + sBx
-  OP_JMPTRUE                //  pc = pc + sBx if R(A) is not false or nil
-  OP_JMPFALSE               //  pc = pc + sBx if R(A) is false or nil
+  OP_JMPTRUE                //  pc = pc + sBx if RK(A) is not false or nil
+  OP_JMPFALSE               //  pc = pc + sBx if RK(A) is false or nil
 )
 
 // instruction parameters

@@ -101,10 +101,11 @@ func disasmImpl(f *vm.FuncProto, buf *bytes.Buffer, indent int) {
       buf.WriteString(fmt.Sprintf("\t!%d &%d", vm.OpGetA(instr), vm.OpGetBx(instr)))
     case vm.OP_JMP:
       sbx := vm.OpGetsBx(instr)
-      buf.WriteString(fmt.Sprintf("->%d", i + sbx))
+      buf.WriteString(fmt.Sprintf("\t->%d", i + 1 + sbx))
     case vm.OP_JMPTRUE, vm.OP_JMPFALSE:
       a, sbx := vm.OpGetA(instr), vm.OpGetsBx(instr)
-      buf.WriteString(fmt.Sprintf("!%d ->%d", a, i + sbx))
+      astr := getRegOrConst(a)
+      buf.WriteString(fmt.Sprintf("%s ->%d", astr, i + 1 + sbx))
     }
 
     buf.WriteString("\n")

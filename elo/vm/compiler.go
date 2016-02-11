@@ -73,6 +73,9 @@ func (err *CompileError) Error() string {
   return fmt.Sprintf("%s:%d: error: %s", err.File, err.Line, err.Message)
 }
 
+//
+// compilerblock
+//
 
 func newCompilerBlock(proto *FuncProto, context blockcontext, parent *compilerblock) *compilerblock {
   return &compilerblock{
@@ -108,6 +111,10 @@ func (b *compilerblock) addNameInfo(name string, info *nameinfo) {
   b.names[name] = info
 }
 
+
+//
+// helper functions
+//
 
 func (c *compiler) error(line int, msg string) {
   panic(&CompileError{Line: line, File: c.filename, Message: msg})
@@ -151,10 +158,17 @@ func (c *compiler) modifyABx(index int, op Opcode, a, b int) bool {
   return c.modifyInstruction(index, OpNewABx(op, a, b))
 }
 
+func (c *compiler) newLabel() uint32 {
+  return c.block.proto.NumCode
+}
+
+func (c *compiler) labelOffset(label uint32) int {
+  return int(c.block.proto.NumCode - label)
+}
+
 func (c *compiler) genRegister() int {
   id := c.block.register
   c.block.register++
-  fmt.Printf("genRegister: %d\n", id)
   return id
 }
 
@@ -371,6 +385,10 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
     c.emitABC(OP_SET, objReg, key, valueReg, v.NodeInfo.Line)
   }
 }
+
+//
+// visitor interface
+//
 
 func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   var rega, regb int
@@ -775,7 +793,6 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     } else {
       c.emitABC(op, reg, left, right, node.NodeInfo.Line)
     }
-
     if exprok && expr.propagate {
       expr.regb = reg
     }
@@ -783,7 +800,30 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
 }
 
 func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegister()
+  }
+  ternaryData := exprdata{true, reg + 1, reg + 1}
+  node.Cond.Accept(c, &ternaryData)
+  cond := ternaryData.regb
+  jmpInstr := c.emitABx(OP_JMPFALSE, cond, 0, node.NodeInfo.Line)
+  thenLabel := c.newLabel()
 
+  ternaryData = exprdata{false, reg, reg}
+  node.Then.Accept(c, &ternaryData)
+  successInstr := c.emitABx(OP_JMP, 0, 0, node.NodeInfo.Line)
+
+  c.modifyABx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(thenLabel))
+  elseLabel := c.newLabel()
+
+  ternaryData = exprdata{false, reg, reg}
+  node.Else.Accept(c, &ternaryData)
+
+  c.modifyABx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
 }
 
 // VisitDeclaration generates code for variable declaration.

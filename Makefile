@@ -1,10 +1,14 @@
+SRC = $(wildcard elo/ast/*.go)
+SRC += $(wildcard elo/parse/*.go)
+SRC += $(wildcard elo/pretty/*.go)
+SRC += $(wildcard elo/vm/*.go)
 OUT = elo
 
 ifdef SystemRoot
 	OUT = elo.exe
 endif
 
-$(OUT):
+$(OUT): $(SRC)
 	@go build -o $@
 
 clean:
