@@ -65,10 +65,7 @@ func (p *prettyprinter) VisitObjectField(node *ObjectField, data interface{}) {
   p.indent++
   p.doIndent()
 
-  if node.Key != nil {
-    node.Key.Accept(p, nil)
-  }
-
+  p.buf.WriteString("'" + node.Key + "'")
   p.buf.WriteString("\n")
   p.doIndent()
 

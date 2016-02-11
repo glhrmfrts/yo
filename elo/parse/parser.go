@@ -169,7 +169,6 @@ func (p *parser) array() ast.Node {
 }
 
 func (p *parser) objectFieldList() []*ast.ObjectField {
-  line := p.line()
   var list []*ast.ObjectField
   for {
     // trailing comma check
@@ -177,7 +176,15 @@ func (p *parser) objectFieldList() []*ast.ObjectField {
       break
     }
 
-    key := p.expr()  
+    var key string
+    if p.tok == ast.T_ID || p.tok == ast.T_STRING {
+      key = p.literal
+      p.next()
+    } else {
+      p.errorExpected("identifier or string")
+    }
+
+    line := p.line()
     if !p.accept(ast.T_COLON) {
       list = append(list, &ast.ObjectField{Key: key, NodeInfo: ast.NodeInfo{line}})
     } else {

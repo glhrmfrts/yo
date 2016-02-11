@@ -49,7 +49,7 @@ type (
 
   ObjectField struct {
     NodeInfo
-    Key   Node
+    Key   string
     Value Node
   }
 

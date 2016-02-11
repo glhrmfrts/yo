@@ -17,42 +17,44 @@ package vm
 
 type Opcode uint
 
+// NOTE: all register ranges are inclusive
 const (
-  OP_LOADNIL Opcode = iota  // set range (inclusive) R(A) .. R(B) = nil
-  OP_LOADCONST              // set R(A) = K(Bx)
-  OP_LOADGLOBAL             // set R(A) = globals[K(Bx)]
+  OP_LOADNIL Opcode = iota  //  R(A) ... R(B) = nil
+  OP_LOADCONST              //  R(A) = K(Bx)
+  OP_LOADGLOBAL             //  R(A) = globals[K(Bx)]
 
   // This opcodes might be temporary, if the language turn out to be OO
-  OP_NEG                    // set R(A) = -RK(Bx)
-  OP_NOT                    // set R(A) = NOT RK(Bx)
-  OP_CMPL                   // set R(A) = ^RK(B)
+  OP_NEG                    //  R(A) = -RK(Bx)
+  OP_NOT                    //  R(A) = NOT RK(Bx)
+  OP_CMPL                   //  R(A) = ^RK(B)
 
-  OP_ADD                    // set R(A) = RK(B) + RK(C)
-  OP_SUB                    // set R(A) = RK(B) - RK(C)
-  OP_MUL                    // set R(A) = RK(B) * RK(C)
-  OP_DIV                    // set R(A) = RK(B) / RK(C)
-  OP_POW                    // set R(A) = pow(RK(B), RK(C))
-  OP_SHL                    // set R(A) = RK(B) << RK(C)
-  OP_SHR                    // set R(A) = RK(B) >> RK(C)
-  OP_AND                    // set R(A) = RK(B) & RK(C)
-  OP_OR                     // set R(A) = RK(B) | RK(C)
-  OP_XOR                    // set R(A) = RK(B) ^ RK(C)
-  OP_LT                     // set R(A) = RK(B) < RK(C)
-  OP_LE                     // set R(A) = RK(B) <= RK(C)
-  OP_EQ                     // set R(A) = RK(B) == RK(C)
-  OP_NE                     // set R(A) = RK(B) != RK(C)
+  OP_ADD                    //  R(A) = RK(B) + RK(C)
+  OP_SUB                    //  R(A) = RK(B) - RK(C)
+  OP_MUL                    //  R(A) = RK(B) * RK(C)
+  OP_DIV                    //  R(A) = RK(B) / RK(C)
+  OP_POW                    //  R(A) = pow(RK(B), RK(C))
+  OP_SHL                    //  R(A) = RK(B) << RK(C)
+  OP_SHR                    //  R(A) = RK(B) >> RK(C)
+  OP_AND                    //  R(A) = RK(B) & RK(C)
+  OP_OR                     //  R(A) = RK(B) | RK(C)
+  OP_XOR                    //  R(A) = RK(B) ^ RK(C)
+  OP_LT                     //  R(A) = RK(B) < RK(C)
+  OP_LE                     //  R(A) = RK(B) <= RK(C)
+  OP_EQ                     //  R(A) = RK(B) == RK(C)
+  OP_NE                     //  R(A) = RK(B) != RK(C)
 
-  OP_MOVE                   // set R(A) = R(B)
-  OP_GET                    // set R(A) = R(B)[RK(C)]
-  OP_SET                    // set R(A)[RK(B)] = RK(C)
-  OP_SETSLICE               // set R(A)[R(A+1):R(A+2)] = R(A+3) ... R(A+Bx+2)
+  OP_MOVE                   //  R(A) = R(B)
+  OP_GET                    //  R(A) = R(B)[RK(C)]
+  OP_SET                    //  R(A)[RK(B)] = RK(C)
+  OP_APPEND                 //  R(A) = append(R(A), R(A+1) ... R(A+Bx))
 
-  OP_CALL                   // set R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
-  OP_ARRAY                  // set R(A) = [] (len, cap = Bx)
+  OP_CALL                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
+  OP_ARRAY                  //  R(A) = []
+  OP_OBJECT                 //  R(A) = {}
 
-  OP_JMP                    // set pc = pc + Bx
-  OP_JMPTRUE                // set pc = pc + Bx if R(A) is not false or nil
-  OP_JMPFALSE               // set pc = pc + Bx if R(A) is false or nil
+  OP_JMP                    //  pc = pc + sBx
+  OP_JMPTRUE                //  pc = pc + sBx if R(A) is not false or nil
+  OP_JMPFALSE               //  pc = pc + sBx if R(A) is false or nil
 )
 
 // instruction parameters
@@ -104,10 +106,11 @@ var (
     OP_MOVE: "MOVE",
     OP_GET: "GET",
     OP_SET: "SET",
-    OP_SETSLICE: "SETSLICE",
+    OP_APPEND: "APPEND",
 
     OP_CALL: "CALL",
     OP_ARRAY: "ARRAY",
+    OP_OBJECT: "OBJECT",
 
     OP_JMP: "JMP",
     OP_JMPTRUE: "JMPTRUE",

@@ -12,15 +12,17 @@ type LineInfo struct {
 
 // Contains executable code by the VM and 
 // static information generated at compilation time.
-// All runtime functions has one of these
+// All runtime functions reference one of these
 type FuncProto struct {
   Source    string
   NumConsts uint32
   NumCode   uint32
   NumLines  uint32
+  NumFuncs  uint32
   Consts    []Value
   Code      []uint32
   Lines     []LineInfo
+  Funcs     []*FuncProto
 }
 
 const (
@@ -84,9 +86,9 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
       a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       bstr, cstr := getRegOrConst(b), getRegOrConst(c)
       buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
-    case OP_SETSLICE:
+    case OP_APPEND:
       a, bx := opGetA(instr), opGetBx(instr)
-      buf.WriteString(fmt.Sprintf("!%d[!%d:!%d] = !%d ... !%d ", a, a+1, a+2, a+3, a+bx+2))
+      buf.WriteString(fmt.Sprintf("\t!%d #%d", a, bx))
     case OP_MOVE:
       a, b := opGetA(instr), opGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
@@ -96,9 +98,8 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
     case OP_CALL:
       a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
-    case OP_ARRAY:
-      a, bx := opGetA(instr), opGetBx(instr)
-      buf.WriteString(fmt.Sprintf("\t!%d #%d", a, bx))
+    case OP_ARRAY, OP_OBJECT:
+      buf.WriteString(fmt.Sprintf("\t!%d", opGetA(instr)))
     case OP_JMP:
       sbx := opGetsBx(instr)
       buf.WriteString(fmt.Sprintf("->%d", i + sbx))

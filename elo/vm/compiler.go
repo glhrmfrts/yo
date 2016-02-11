@@ -325,7 +325,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
   }
   if end >= start {
     // variables without initializer are set to nil
-    c.emitAB(OP_LOADNIL, start, end, names[start].NodeInfo.Line)
+    c.emitAB(OP_LOADNIL, start, end, names[0].NodeInfo.Line)
   }
 }
 
@@ -435,7 +435,7 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
     reg = c.genRegister()
   }
   length := len(node.Elements)
-  c.emitABx(OP_ARRAY, reg, length, node.NodeInfo.Line)
+  c.emitAB(OP_ARRAY, reg, 0, node.NodeInfo.Line)
 
   times := length / kArrayMaxRegisters + 1
   for t := 0; t < times; t++ {
@@ -446,12 +446,10 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
     }
     for i := 0; i < end; i++ {
       el := node.Elements[start + i]
-      exprdata := exprdata{false, reg + i + 3, reg + i + 3}
+      exprdata := exprdata{false, reg + i + 1, reg + i + 1}
       el.Accept(c, &exprdata)
     }
-    c.emitABx(OP_LOADCONST, reg + 1, c.addConst(Number(start)), node.NodeInfo.Line)
-    c.emitABx(OP_LOADCONST, reg + 2, c.addConst(Number(start + end)), node.NodeInfo.Line)
-    c.emitABx(OP_SETSLICE, reg, end, node.NodeInfo.Line)
+    c.emitABx(OP_APPEND, reg, end, node.NodeInfo.Line)
   }
   if exprok && expr.propagate {
     expr.regb = reg
@@ -459,15 +457,38 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
 }
 
 func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
+  expr, exprok := data.(*exprdata)
+  assert(exprok, "ObjectField exprok")
+  objreg := expr.rega
+  key := kConstOffset + c.addConst(String(node.Key))
 
+  valueData := exprdata{true, objreg + 1, objreg + 1}
+  node.Value.Accept(c, &valueData)
+  value := valueData.regb
+
+  c.emitABC(OP_SET, objreg, key, value, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
-
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegister()
+  }
+  c.emitAB(OP_OBJECT, reg, 0, node.NodeInfo.Line)
+  for _, field := range node.Fields {
+    fieldData := exprdata{false, reg, reg}
+    field.Accept(c, &fieldData)
+  }
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
- 
+  
 }
 
 func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {

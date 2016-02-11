@@ -1,3 +1,8 @@
 // test data structures
 
-[1,1,1,1,1,1,1,1,1,1,1,1,]
+a := {
+	hello: "world",
+	nice: 5,
+}
+
+b, c := a
