@@ -22,6 +22,9 @@ const (
   OP_LOADNIL Opcode = iota  //  R(A) ... R(B) = nil
   OP_LOADCONST              //  R(A) = K(Bx)
   OP_LOADGLOBAL             //  R(A) = globals[K(Bx)]
+  OP_SETGLOBAL              //  globals[K(Bx)] = R(A)
+  OP_LOADREF                //  R(A) = refs[K(Bx)]
+  OP_SETREF                 //  refs[K(Bx)] = R(A)
 
   OP_NEG                    //  R(A) = -RK(Bx)
   OP_NOT                    //  R(A) = NOT RK(Bx)
@@ -73,9 +76,6 @@ const (
 
   // offset for RK
   kConstOffset = 250
-
-  // how much registers an array can use to set it's values
-  kArrayMaxRegisters = 10
 )
 
 var (
@@ -83,6 +83,9 @@ var (
     OP_LOADNIL: "LOADNIL",
     OP_LOADCONST: "LOADCONST",
     OP_LOADGLOBAL: "LOADGLOBAL",
+    OP_SETGLOBAL: "SETGLOBAL",
+    OP_LOADREF: "LOADREF",
+    OP_SETREF: "SETREF",
 
     OP_NEG: "NEG",
     OP_NOT: "NOT",

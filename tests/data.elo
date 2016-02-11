@@ -1,5 +1,12 @@
 // test data structures
 
-a := func() {
-	{a: 2}
+b, c := 2, 9
+
+a := func(b) {
+	c = nil
+	f := func() {
+		c
+	}
 }
+
+c = 7

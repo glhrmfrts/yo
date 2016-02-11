@@ -55,7 +55,7 @@ type (
 // names lexical scopes
 const (
   kScopeLocal scope = iota
-  kScopeUpval
+  kScopeRef
   kScopeGlobal
 )
 
@@ -65,6 +65,9 @@ const (
   kBlockContextLoop
   kBlockContextBranch
 )
+
+// how much registers an array can use to set it's values
+const kArrayMaxRegisters = 10
 
 func (err *CompileError) Error() string {
   return fmt.Sprintf("%s:%d: error: %s", err.File, err.Line, err.Message)
@@ -86,8 +89,8 @@ func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
   for block != nil {
     info, ok := block.names[name]
     if ok {
-      if closures > 0 {
-        info.scope = kScopeUpval
+      if closures > 0 && info.scope == kScopeLocal {
+        info.scope = kScopeRef
       }
       return info, true
     }
@@ -115,7 +118,7 @@ func (c *compiler) emitInstruction(instr uint32, line int) int {
   f.Code = append(f.Code, instr)
   f.NumCode++
 
-  if line != c.lastLine {
+  if line != c.lastLine || f.NumLines == 0 {
     f.Lines = append(f.Lines, LineInfo{f.NumCode - 1, uint16(line)})
     f.NumLines++
     c.lastLine = line
@@ -333,13 +336,22 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
 func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) {
   switch v := left.(type) {
   case *ast.Id:
-    info, ok := c.block.names[v.Value]
+    var scope scope
+    info, ok := c.block.nameInfo(v.Value)
     if !ok {
-      c.error(v.NodeInfo.Line, fmt.Sprintf("undefined '%s'", v.Value))
+      scope = kScopeGlobal
+    } else {
+      scope = info.scope
     }
-    switch info.scope {
+    switch scope {
     case kScopeLocal:
       c.emitAB(OP_MOVE, info.reg, valueReg, v.NodeInfo.Line)
+    case kScopeRef, kScopeGlobal:
+      op := OP_SETGLOBAL
+      if scope == kScopeRef {
+        op = OP_SETREF
+      }
+      c.emitABx(op, valueReg, c.addConst(String(v.Value)), v.NodeInfo.Line)
     }
   case *ast.Subscript:
     arrData := exprdata{true, assignReg + 1, assignReg + 1}
@@ -439,7 +451,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
   } else if ok {
     scope = info.scope
   } else {
-    // assume global if it can't be found
+    // assume global if it can't be found in the lexical scope
     scope = kScopeGlobal
   }
   switch scope {
@@ -449,8 +461,12 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
       return
     }
     c.emitAB(OP_MOVE, reg, info.reg, node.NodeInfo.Line)
-  case kScopeUpval, kScopeGlobal:
-    c.emitABx(OP_LOADGLOBAL, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
+  case kScopeRef, kScopeGlobal:
+    op := OP_LOADGLOBAL
+    if scope == kScopeRef {
+      op = OP_LOADREF
+    }
+    c.emitABx(op, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
     if exprok && expr.propagate {
       expr.regb = reg
     }
@@ -526,18 +542,25 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  argCount := len(node.Args)
   parent := c.block.proto
   proto := newFuncProto(parent.Source)
 
   block := newCompilerBlock(proto, kBlockContextFunc, c.block)
+  c.block = block
+
   index := int(parent.NumFuncs)
   parent.Funcs = append(parent.Funcs, proto)
   parent.NumFuncs++
 
-  // reserve registers for the arguments
-  block.register += argCount
-  c.block = block
+  // insert arguments into scope
+  for _, n := range node.Args {
+    switch arg := n.(type) {
+    case *ast.Id:
+      reg := c.genRegister()
+      c.block.addNameInfo(arg.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+    }
+  }
+
   node.Body.Accept(c, nil)
 
   c.block = c.block.parent
@@ -692,7 +715,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       } else {
         op = OP_JMPTRUE
       }
-      exprdata := exprdata{true, reg, 0}
+      exprdata := exprdata{true, reg, reg}
       node.Left.Accept(c, &exprdata)
       left := exprdata.regb
 
@@ -821,7 +844,6 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
       current = reg + 1
     }
   }
-
   // assign the results to the variables
   for i, variable := range node.Left {
     valueReg := start + i

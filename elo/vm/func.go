@@ -1,5 +1,7 @@
 package vm
 
+// TODO: move disasm to it's own package
+
 import (
   "fmt"
   "bytes"
@@ -112,9 +114,12 @@ func disasmImpl(f *FuncProto, buf *bytes.Buffer, indent int) {
     case OP_MOVE:
       a, b := opGetA(instr), opGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
-    case OP_LOADGLOBAL:
+    case OP_LOADGLOBAL, OP_SETGLOBAL:
       a, bx := opGetA(instr), opGetBx(instr)
       buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
+    case OP_LOADREF, OP_SETREF:
+      a, bx := opGetA(instr), opGetBx(instr)
+      buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
     case OP_CALL:
       a, b, c := opGetA(instr), opGetB(instr), opGetC(instr)
       buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
