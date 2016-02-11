@@ -23,7 +23,6 @@ const (
   OP_LOADCONST              //  R(A) = K(Bx)
   OP_LOADGLOBAL             //  R(A) = globals[K(Bx)]
 
-  // This opcodes might be temporary, if the language turn out to be OO
   OP_NEG                    //  R(A) = -RK(Bx)
   OP_NOT                    //  R(A) = NOT RK(Bx)
   OP_CMPL                   //  R(A) = ^RK(B)
@@ -51,6 +50,7 @@ const (
   OP_CALL                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
   OP_ARRAY                  //  R(A) = []
   OP_OBJECT                 //  R(A) = {}
+  OP_FUNC                   //  R(A) = func() { proto = funcs[Bx] }
 
   OP_JMP                    //  pc = pc + sBx
   OP_JMPTRUE                //  pc = pc + sBx if R(A) is not false or nil
@@ -95,9 +95,9 @@ var (
     OP_POW: "POW",                 
     OP_SHL: "SHL",         
     OP_SHR: "SHR",        
-    OP_AND: "AND",         
-    OP_OR: "OR",         
-    OP_XOR: "XOR",           
+    OP_AND: "AND",      
+    OP_OR: "OR",      
+    OP_XOR: "XOR",         
     OP_LT: "LT",         
     OP_LE: "LE",           
     OP_EQ: "EQ",           
@@ -111,6 +111,7 @@ var (
     OP_CALL: "CALL",
     OP_ARRAY: "ARRAY",
     OP_OBJECT: "OBJECT",
+    OP_FUNC: "FUNC",
 
     OP_JMP: "JMP",
     OP_JMPTRUE: "JMPTRUE",

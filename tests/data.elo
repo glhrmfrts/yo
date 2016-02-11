@@ -1,8 +1,5 @@
 // test data structures
 
-a := {
-	hello: "world",
-	nice: 5,
+a := func() {
+	{a: 2}
 }
-
-b, c := a

@@ -61,9 +61,9 @@ const (
 
 // blocks context
 const (
-  kContextFunc blockcontext = iota
-  kContextLoop
-  kContextBranch
+  kBlockContextFunc blockcontext = iota
+  kBlockContextLoop
+  kBlockContextBranch
 )
 
 func (err *CompileError) Error() string {
@@ -71,10 +71,11 @@ func (err *CompileError) Error() string {
 }
 
 
-func newCompilerBlock(proto *FuncProto, context blockcontext) *compilerblock {
+func newCompilerBlock(proto *FuncProto, context blockcontext, parent *compilerblock) *compilerblock {
   return &compilerblock{
     proto: proto,
     context: context,
+    parent: parent,
     names: make(map[string]*nameinfo, 128),
   }
 }
@@ -90,7 +91,7 @@ func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
       }
       return info, true
     }
-    if block.context == kContextFunc {
+    if block.context == kBlockContextFunc {
       closures++
     }
     block = block.parent
@@ -329,6 +330,36 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
   }
 }
 
+func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) {
+  switch v := left.(type) {
+  case *ast.Id:
+    info, ok := c.block.names[v.Value]
+    if !ok {
+      c.error(v.NodeInfo.Line, fmt.Sprintf("undefined '%s'", v.Value))
+    }
+    switch info.scope {
+    case kScopeLocal:
+      c.emitAB(OP_MOVE, info.reg, valueReg, v.NodeInfo.Line)
+    }
+  case *ast.Subscript:
+    arrData := exprdata{true, assignReg + 1, assignReg + 1}
+    v.Left.Accept(c, &arrData)
+    arrReg := arrData.regb
+
+    subData := exprdata{true, assignReg + 1, assignReg + 1}
+    v.Right.Accept(c, &subData)
+    subReg := subData.regb
+    c.emitABC(OP_SET, arrReg, subReg, valueReg, v.NodeInfo.Line)
+  case *ast.Selector:
+    objData := exprdata{true, assignReg + 1, assignReg + 1}
+    v.Left.Accept(c, &objData)
+    objReg := objData.regb
+    key := kConstOffset + c.addConst(String(v.Value))
+
+    c.emitABC(OP_SET, objReg, key, valueReg, v.NodeInfo.Line)
+  }
+}
+
 func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
   var rega, regb int
   expr, ok := data.(*exprdata)
@@ -488,7 +519,36 @@ func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
 }
 
 func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
-  
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegister()
+  }
+  argCount := len(node.Args)
+  parent := c.block.proto
+  proto := newFuncProto(parent.Source)
+
+  block := newCompilerBlock(proto, kBlockContextFunc, c.block)
+  index := int(parent.NumFuncs)
+  parent.Funcs = append(parent.Funcs, proto)
+  parent.NumFuncs++
+
+  // reserve registers for the arguments
+  block.register += argCount
+  c.block = block
+  node.Body.Accept(c, nil)
+
+  c.block = c.block.parent
+  c.emitABx(OP_FUNC, reg, index, node.NodeInfo.Line)
+
+  if node.Name != nil {
+    c.assignmentHelper(node.Name, reg + 1, reg)
+  }
+  if exprok && expr.propagate {
+    expr.regb = reg
+  }
 }
 
 func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
@@ -770,41 +830,7 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
     if valueReg >= current {
       break
     }
-
-    id, ok := variable.(*ast.Id)
-    if ok {
-      info, ok := c.block.names[id.Value]
-      if !ok {
-        c.error(id.NodeInfo.Line, fmt.Sprintf("undefined '%s'", id.Value))
-      }
-      switch info.scope {
-      case kScopeLocal:
-        c.emitAB(OP_MOVE, info.reg, valueReg, id.NodeInfo.Line)
-      }
-      continue
-    }
-    subs, ok := variable.(*ast.Subscript)
-    if ok {
-      arrData := exprdata{true, current + 1, current + 1}
-      subs.Left.Accept(c, &arrData)
-      arrReg := arrData.regb
-
-      subData := exprdata{true, current + 1, current + 1}
-      subs.Right.Accept(c, &subData)
-      subReg := subData.regb
-
-      c.emitABC(OP_SET, arrReg, subReg, valueReg, subs.NodeInfo.Line)
-      continue
-    }
-    selector, ok := variable.(*ast.Selector)
-    if ok {
-      objData := exprdata{true, current + 1, current + 1}
-      selector.Left.Accept(c, &objData)
-      objReg := objData.regb
-      key := kConstOffset + c.addConst(String(selector.Value))
-
-      c.emitABC(OP_SET, objReg, key, valueReg, selector.NodeInfo.Line)
-    }
+    c.assignmentHelper(variable, current, valueReg)
   }
 }
 
@@ -856,7 +882,7 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   var c compiler
   c.filename = filename
   c.mainFunc = newFuncProto(filename)
-  c.block = newCompilerBlock(c.mainFunc, kContextFunc)
+  c.block = newCompilerBlock(c.mainFunc, kBlockContextFunc, nil)
   
   root.Accept(&c, nil)
 

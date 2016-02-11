@@ -35,13 +35,32 @@ func newFuncProto(source string) *FuncProto {
   }
 }
 
-func Disasm(f *FuncProto, buf *bytes.Buffer) {
-  buf.WriteString(fmt.Sprintf("function at %s\n", f.Source))
+func doIndent(buf *bytes.Buffer, indent int) {
+  for indent > 0 {
+    buf.WriteString(" ")
+    indent--
+  }
+}
+
+func disasmImpl(f *FuncProto, buf *bytes.Buffer, indent int) {
+  buf.WriteString("\n\n")
+  doIndent(buf, indent)
+  buf.WriteString(fmt.Sprintf("function at %s {{{\n", f.Source))
+  doIndent(buf, indent)
   buf.WriteString(fmt.Sprintf("constants: %d\n", f.NumConsts))
+  doIndent(buf, indent)
   for _, c := range f.Consts {
     buf.WriteString(fmt.Sprint("\t", c))
   }
   buf.WriteString("\n\n")
+
+  doIndent(buf, indent)
+  buf.WriteString(fmt.Sprintf("funcs: %d\n", f.NumFuncs))
+  for _, f := range f.Funcs {
+    disasmImpl(f, buf, indent + 2)
+  }
+
+  doIndent(buf, indent)
   buf.WriteString("line\t#\topcode\t\targs\n")
 
   getRegOrConst := func(a uint) string {
@@ -52,6 +71,7 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
     }
   }
 
+  doIndent(buf, indent)
   var currentLine uint32
   for i, instr := range f.Code {
     lineChanged := false
@@ -100,6 +120,8 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
       buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
     case OP_ARRAY, OP_OBJECT:
       buf.WriteString(fmt.Sprintf("\t!%d", opGetA(instr)))
+    case OP_FUNC:
+      buf.WriteString(fmt.Sprintf("\t!%d &%d", opGetA(instr), opGetBx(instr)))
     case OP_JMP:
       sbx := opGetsBx(instr)
       buf.WriteString(fmt.Sprintf("->%d", i + sbx))
@@ -109,5 +131,12 @@ func Disasm(f *FuncProto, buf *bytes.Buffer) {
     }
 
     buf.WriteString("\n")
+    doIndent(buf, indent)
   }
+
+  buf.WriteString("}}}\n\n\n")
+}
+
+func Disasm(f *FuncProto, buf *bytes.Buffer) {
+  disasmImpl(f, buf, 0)
 }

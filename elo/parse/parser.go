@@ -302,9 +302,12 @@ func (p *parser) function() ast.Node {
   line := p.line()
   p.next() // 'func'
 
-  name := p.selectorOrSubscriptExpr(nil)
-  if !p.checkLhs(name) {
-    p.error("function name must be assignable")
+  var name ast.Node
+  if p.tok != ast.T_LPAREN {
+    name = p.selectorOrSubscriptExpr(nil)
+    if !p.checkLhs(name) {
+      p.error("function name must be assignable")
+    }
   }
 
   args := p.functionArgs()
