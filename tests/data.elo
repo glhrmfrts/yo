@@ -11,7 +11,7 @@ func Person.sub(p, other) {
   return p, other.call()
 }
 
-strings.repeat(s, "lahjsda")
+strings.repeat(s, 35)
 
 return {
   Person: Person,

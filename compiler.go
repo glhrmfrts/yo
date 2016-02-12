@@ -26,7 +26,6 @@ type (
   // lexical context of a block, (function, loop, branch...)
   blockcontext int
 
-  // information of a name in the program
   nameinfo struct {
     isConst bool
     value   Value // only set if isConst == true
@@ -35,15 +34,21 @@ type (
     block   *compilerblock
   }
 
+  loopinfo struct {
+    breaks         []uint32
+    continues      []uint32
+    breakTarget    uint32
+    continueTarget uint32
+  }
+
   // lexical block structure for compiler
   compilerblock struct {
-    context       blockcontext
-    start         uint32
-    register      int
-    pendingBreaks []uint32
-    names         map[string]*nameinfo
-    proto         *FuncProto
-    parent        *compilerblock
+    context  blockcontext
+    register int
+    names    map[string]*nameinfo
+    loop     *loopinfo
+    proto    *FuncProto
+    parent   *compilerblock
   }
 
   compiler struct {
@@ -187,20 +192,39 @@ func (c *compiler) genRegister() int {
 func (c *compiler) enterBlock(context blockcontext) {
   assert(c.block != nil, "c.block enterBlock")
   block := newCompilerBlock(c.block.proto, context, c.block)
-  block.start = block.proto.NumCode
   block.register = c.block.register
+
+  if context == kBlockContextLoop {
+    block.loop = &loopinfo{}
+  } else if c.block.loop != nil {
+    block.loop = c.block.loop
+  }
   c.block = block
 }
 
 func (c *compiler) leaveBlock() {
   block := c.block
   if block.context == kBlockContextLoop {
-    end := block.proto.NumCode - 1
-    for _, index := range block.pendingBreaks {
-      c.modifyAsBx(int(index), OP_JMP, 0, int(end - index))
+    loop := block.loop
+    for _, index := range loop.breaks {
+      c.modifyAsBx(int(index), OP_JMP, 0, int(loop.breakTarget - index - 1))
+    }
+    for _, index := range loop.continues {
+      c.modifyAsBx(int(index), OP_JMP, 0, int(loop.continueTarget - index - 1))
     }
   }
   c.block = block.parent
+}
+
+func (c *compiler) insideLoop() bool {
+  block := c.block
+  for block != nil {
+    if block.context == kBlockContextLoop {
+      return true
+    }
+    block = block.parent
+  }
+  return false
 }
 
 // Add a constant to the current prototype's constant pool
@@ -426,15 +450,17 @@ func (c *compiler) branchConditionHelper(cond, then, else_ ast.Node, reg int) {
 
   ternaryData = exprdata{false, reg, reg}
   then.Accept(c, &ternaryData)
-  successInstr := c.emitAsBx(OP_JMP, 0, 0, c.lastLine)
-
   c.modifyAsBx(jmpInstr, OP_JMPFALSE, condr, c.labelOffset(thenLabel))
-  elseLabel := c.newLabel()
 
-  ternaryData = exprdata{false, reg, reg}
-  else_.Accept(c, &ternaryData)
+  if else_ != nil {
+    successInstr := c.emitAsBx(OP_JMP, 0, 0, c.lastLine)
+    
+    elseLabel := c.newLabel()
+    ternaryData = exprdata{false, reg, reg}
+    else_.Accept(c, &ternaryData)
 
-  c.modifyAsBx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+    c.modifyAsBx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+  }
 }
 
 func (c *compiler) functionReturnGuard() {
@@ -755,7 +781,7 @@ func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
   left := leftdata.regb
   one := OpConstOffset + c.addConst(Number(1))
 
-  // it wouldn't make sense to move it if we're not in an expression
+  // don't bother moving if we're not in an expression
   if exprok {
     c.emitAB(OP_MOVE, reg, left, node.NodeInfo.Line)
   }
@@ -787,7 +813,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     one := OpConstOffset + c.addConst(Number(1))
     c.emitABC(op, exprdata.regb, exprdata.regb, one, node.NodeInfo.Line)
 
-    // it wouldn't make sense to move it if we're not in an expression
+    // don't bother moving if we're not in an expression
     if exprok {
       c.emitAB(OP_MOVE, reg, exprdata.regb, node.NodeInfo.Line)
     }
@@ -978,16 +1004,15 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
 }
 
 func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
-  if c.block.context != kBlockContextLoop {
+  if !c.insideLoop() {
     c.error(node.NodeInfo.Line, fmt.Sprintf("%s outside loop", node.Type))
   }
+  instr := c.emitAsBx(OP_JMP, 0, 0, node.NodeInfo.Line)
   switch node.Type {
   case ast.T_CONTINUE:
-    index := c.block.proto.NumCode
-    c.emitAsBx(OP_JMP, 0, -int(index - c.block.start), node.NodeInfo.Line)
+    c.block.loop.continues = append(c.block.loop.continues, uint32(instr))
   case ast.T_BREAK:
-    instr := c.emitAsBx(OP_JMP, 0, 0, node.NodeInfo.Line)
-    c.block.pendingBreaks = append(c.block.pendingBreaks, uint32(instr))
+    c.block.loop.breaks = append(c.block.loop.breaks, uint32(instr))
   }
 }
 
@@ -1021,25 +1046,41 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
   c.enterBlock(kBlockContextLoop)
   defer c.leaveBlock()
 
+  hasCond := node.Cond != nil
   if node.Init != nil {
     node.Init.Accept(c, nil)
   }
-  reg := c.block.register
-  condLabel := c.newLabel()
+ 
+  startLabel := c.newLabel()
 
-  condData := exprdata{true, reg, reg}
-  node.Cond.Accept(c, &condData)
-  cond := condData.regb
+  var cond, jmpInstr int
+  var jmpLabel uint32
+  if hasCond {
+    reg := c.block.register
+    condData := exprdata{true, reg, reg}
+    node.Cond.Accept(c, &condData)
 
-  jmpInstr := c.emitAsBx(OP_JMPFALSE, cond, 0, c.lastLine)
-  bodyLabel := c.newLabel()
+    cond = condData.regb
+    jmpInstr = c.emitAsBx(OP_JMPFALSE, cond, 0, c.lastLine)
+    jmpLabel = c.newLabel()
+  }
+
   node.Body.Accept(c, nil)
+  c.block.loop.continueTarget = c.newLabel()
 
-  node.Step.Accept(c, nil)
-  c.block.register -= 1 // discard register consumed by Step
+  if node.Step != nil {
+    node.Step.Accept(c, nil)
+    c.block.register -= 1 // discard register consumed by Step
+  } else {
+    c.block.loop.continueTarget = startLabel // saves one jump
+  }
 
-  c.emitAsBx(OP_JMP, 0, -c.labelOffset(condLabel) - 1, c.lastLine)
-  c.modifyAsBx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(bodyLabel))
+  c.emitAsBx(OP_JMP, 0, -c.labelOffset(startLabel) - 1, c.lastLine)
+
+  if hasCond {
+    c.modifyAsBx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(jmpLabel))
+  }
+  c.block.loop.breakTarget = c.newLabel()
 }
 
 func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
