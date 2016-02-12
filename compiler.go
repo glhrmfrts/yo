@@ -68,8 +68,10 @@ const (
   kBlockContextBranch
 )
 
-// how much registers an array can use to set it's values
+// How much registers an array can append at one time
+// when it's created in literal form (see VisitArray)
 const kArrayMaxRegisters = 10
+
 
 func (err *CompileError) Error() string {
   return fmt.Sprintf("%s:%d: %s", err.File, err.Line, err.Message)
@@ -156,8 +158,16 @@ func (c *compiler) emitABx(op Opcode, a, b, line int) int {
   return c.emitInstruction(OpNewABx(op, a, b), line)
 }
 
+func (c *compiler) emitAsBx(op Opcode, a, b, line int) int {
+  return c.emitInstruction(OpNewAsBx(op, a, b), line)
+}
+
 func (c *compiler) modifyABx(index int, op Opcode, a, b int) bool {
   return c.modifyInstruction(index, OpNewABx(op, a, b))
+}
+
+func (c *compiler) modifyAsBx(index int, op Opcode, a, b int) bool {
+  return c.modifyInstruction(index, OpNewAsBx(op, a, b))
 }
 
 func (c *compiler) newLabel() uint32 {
@@ -185,9 +195,9 @@ func (c *compiler) enterBlock(context blockcontext) {
 func (c *compiler) leaveBlock() {
   block := c.block
   if block.context == kBlockContextLoop {
-    end := block.proto.NumCode
+    end := block.proto.NumCode - 1
     for _, index := range block.pendingBreaks {
-      c.modifyABx(int(index), OP_JMP, 0, int(end - index))
+      c.modifyAsBx(int(index), OP_JMP, 0, int(end - index))
     }
   }
   c.block = block.parent
@@ -211,7 +221,7 @@ func (c *compiler) addConst(value Value) int {
   return int(f.NumConsts - 1)
 }
 
-// try to "constant fold" an expression
+// Try to "constant fold" an expression
 func (c *compiler) constFold(node ast.Node) (Value, bool) {
   switch t := node.(type) {
   case *ast.Number:
@@ -411,20 +421,20 @@ func (c *compiler) branchConditionHelper(cond, then, else_ ast.Node, reg int) {
   ternaryData := exprdata{true, reg + 1, reg + 1}
   cond.Accept(c, &ternaryData)
   condr := ternaryData.regb
-  jmpInstr := c.emitABx(OP_JMPFALSE, condr, 0, c.lastLine)
+  jmpInstr := c.emitAsBx(OP_JMPFALSE, condr, 0, c.lastLine)
   thenLabel := c.newLabel()
 
   ternaryData = exprdata{false, reg, reg}
   then.Accept(c, &ternaryData)
-  successInstr := c.emitABx(OP_JMP, 0, 0, c.lastLine)
+  successInstr := c.emitAsBx(OP_JMP, 0, 0, c.lastLine)
 
-  c.modifyABx(jmpInstr, OP_JMPFALSE, condr, c.labelOffset(thenLabel))
+  c.modifyAsBx(jmpInstr, OP_JMPFALSE, condr, c.labelOffset(thenLabel))
   elseLabel := c.newLabel()
 
   ternaryData = exprdata{false, reg, reg}
   else_.Accept(c, &ternaryData)
 
-  c.modifyABx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+  c.modifyAsBx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
 }
 
 func (c *compiler) functionReturnGuard() {
@@ -726,7 +736,30 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
 }
 
 func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
-  
+  var reg int
+  expr, exprok := data.(*exprdata)
+  if exprok {
+    reg = expr.rega
+  } else {
+    reg = c.genRegister()
+  }
+  var op Opcode
+  switch node.Op {
+  case ast.T_PLUSPLUS:
+    op = OP_ADD
+  case ast.T_MINUSMINUS:
+    op = OP_SUB
+  }
+  leftdata := exprdata{true, reg, reg}
+  node.Left.Accept(c, &leftdata)
+  left := leftdata.regb
+  one := OpConstOffset + c.addConst(Number(1))
+
+  // it wouldn't make sense to move it if we're not in an expression
+  if exprok {
+    c.emitAB(OP_MOVE, reg, left, node.NodeInfo.Line)
+  }
+  c.emitABC(op, left, left, one, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
@@ -744,6 +777,20 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
       return
     }
     c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  } else if ast.IsPostfixOp(node.Op) {
+    op := OP_ADD
+    if node.Op == ast.T_MINUSMINUS {
+      op = OP_SUB
+    }
+    exprdata := exprdata{true, reg, reg}
+    node.Right.Accept(c, &exprdata)
+    one := OpConstOffset + c.addConst(Number(1))
+    c.emitABC(op, exprdata.regb, exprdata.regb, one, node.NodeInfo.Line)
+
+    // it wouldn't make sense to move it if we're not in an expression
+    if exprok {
+      c.emitAB(OP_MOVE, reg, exprdata.regb, node.NodeInfo.Line)
+    }
   } else {
     var op Opcode
     switch node.Op {
@@ -754,7 +801,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     case ast.T_TILDE:
       op = OP_CMPL
     }
-    exprdata := exprdata{true, 0, 0}
+    exprdata := exprdata{true, reg, reg}
     node.Right.Accept(c, &exprdata)
     c.emitABx(op, reg, exprdata.regb, node.NodeInfo.Line)
     if exprok && expr.propagate {
@@ -790,12 +837,12 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       node.Left.Accept(c, &exprdata)
       left := exprdata.regb
 
-      jmpInstr := c.emitABx(op, left, 0, node.NodeInfo.Line)
+      jmpInstr := c.emitAsBx(op, left, 0, node.NodeInfo.Line)
       size := c.block.proto.NumCode
 
       exprdata.propagate = false
       node.Right.Accept(c, &exprdata)
-      c.modifyABx(jmpInstr, op, left, int(c.block.proto.NumCode - size) + 1)
+      c.modifyAsBx(jmpInstr, op, left, int(c.block.proto.NumCode - size))
       return
     }
     
@@ -863,9 +910,6 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
   c.branchConditionHelper(node.Cond, node.Then, node.Else, reg)
 }
 
-// VisitDeclaration generates code for variable declaration.
-// For consts declaration no code is generated, they are only kept
-// in the current block's local symbol table.
 func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
   valueCount := len(node.Right)
   if node.IsConst {
@@ -940,9 +984,9 @@ func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
   switch node.Type {
   case ast.T_CONTINUE:
     index := c.block.proto.NumCode
-    c.emitABx(OP_JMP, 0, int(index - c.block.start), node.NodeInfo.Line)
+    c.emitAsBx(OP_JMP, 0, -int(index - c.block.start), node.NodeInfo.Line)
   case ast.T_BREAK:
-    instr := c.emitABx(OP_JMP, 0, 0, node.NodeInfo.Line)
+    instr := c.emitAsBx(OP_JMP, 0, 0, node.NodeInfo.Line)
     c.block.pendingBreaks = append(c.block.pendingBreaks, uint32(instr))
   }
 }
@@ -974,7 +1018,28 @@ func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interfac
 }
 
 func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
+  c.enterBlock(kBlockContextLoop)
+  defer c.leaveBlock()
 
+  if node.Init != nil {
+    node.Init.Accept(c, nil)
+  }
+  reg := c.block.register
+  condLabel := c.newLabel()
+
+  condData := exprdata{true, reg, reg}
+  node.Cond.Accept(c, &condData)
+  cond := condData.regb
+
+  jmpInstr := c.emitAsBx(OP_JMPFALSE, cond, 0, c.lastLine)
+  bodyLabel := c.newLabel()
+  node.Body.Accept(c, nil)
+
+  node.Step.Accept(c, nil)
+  c.block.register -= 1 // discard register consumed by Step
+
+  c.emitAsBx(OP_JMP, 0, -c.labelOffset(condLabel) - 1, c.lastLine)
+  c.modifyAsBx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(bodyLabel))
 }
 
 func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
@@ -991,6 +1056,7 @@ func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
 // for the "main" function from it.
 // Any type of Node is accepted, either a block representing the program
 // or a single expression.
+//
 func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   defer func() {
     if r := recover(); r != nil {

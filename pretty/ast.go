@@ -396,18 +396,21 @@ func (p *prettyprinter) VisitForStmt(node *ast.ForStmt, data interface{}) {
 
   if node.Init != nil {
     p.doIndent()
+    p.buf.WriteString("init: ")
     node.Init.Accept(p, nil)
     p.buf.WriteString("\n")
   }
 
   if node.Cond != nil {
     p.doIndent()
+    p.buf.WriteString("cond: ")
     node.Cond.Accept(p, nil)
     p.buf.WriteString("\n")
   }
 
   p.doIndent()
   if node.Step != nil {
+    p.buf.WriteString("step: ")
     node.Step.Accept(p, nil)
     p.buf.WriteString("\n")
     p.doIndent()

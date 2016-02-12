@@ -56,6 +56,7 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
 
     line := f.Lines[currentLine]
     opcode := elo.OpGetOpcode(instr)
+    pc := i + 1
 
     if lineChanged || i == 0 {
       buf.WriteString(fmt.Sprint(line.Line, "\t"))
@@ -101,11 +102,11 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
       buf.WriteString(fmt.Sprintf("\t!%d &%d", elo.OpGetA(instr), elo.OpGetBx(instr)))
     case elo.OP_JMP:
       sbx := elo.OpGetsBx(instr)
-      buf.WriteString(fmt.Sprintf("\t->%d", i + 1 + sbx))
+      buf.WriteString(fmt.Sprintf("\t->%d", pc + sbx))
     case elo.OP_JMPTRUE, elo.OP_JMPFALSE:
       a, sbx := elo.OpGetA(instr), elo.OpGetsBx(instr)
       astr := getRegOrConst(a)
-      buf.WriteString(fmt.Sprintf("%s ->%d", astr, i + 1 + sbx))
+      buf.WriteString(fmt.Sprintf("%s ->%d", astr, pc + sbx))
     }
 
     buf.WriteString("\n")

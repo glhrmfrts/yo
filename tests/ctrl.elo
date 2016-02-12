@@ -1,5 +1,6 @@
 // test control-flow structures
 
 for i := 0; i < 5; i++ {
-
+	a := 3
+	continue
 }

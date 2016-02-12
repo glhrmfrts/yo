@@ -6,7 +6,7 @@ import (
   "io/ioutil"
 	"github.com/glhrmfrts/elo/parse"
   "github.com/glhrmfrts/elo/pretty"
-  _ "github.com/glhrmfrts/elo"
+  "github.com/glhrmfrts/elo"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 
   fmt.Println(pretty.SyntaxTree(root, 2))
 
-/*
+
   code, err := elo.Compile(root, filename)
   if err != nil {
     fmt.Println(err.Error())
@@ -32,5 +32,4 @@ func main() {
   }
 
   fmt.Println(pretty.Disasm(code))
-*/
 }

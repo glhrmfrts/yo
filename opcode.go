@@ -66,6 +66,7 @@ const (
   kArgAMask = 0xff
   kArgBCMask = 0x1ff
   kArgBxMask = (0x1ff << 9) | 0x1ff
+  kArgsBxMask = kArgBxMask >> 1
 
   kOpcodeSize = 6
   kArgASize = 8
@@ -151,6 +152,10 @@ func OpNewABx(op Opcode, a, b int) uint32 {
   return uint32(((b & kArgBxMask) << kArgBOffset) | ((a & kArgAMask) << kOpcodeSize) | (int(op) & kOpcodeMask))
 }
 
+func OpNewAsBx(op Opcode, a, b int) uint32 {
+  return OpNewABx(op, a, b + kArgsBxMask)
+}
+
 func OpGetOpcode(instr uint32) Opcode {
   return Opcode(instr & kOpcodeMask)
 }
@@ -172,5 +177,5 @@ func OpGetBx(instr uint32) uint {
 }
 
 func OpGetsBx(instr uint32) int {
-  return int((instr >> kArgBOffset) & kArgBxMask) 
+  return int(OpGetBx(instr)) - kArgsBxMask
 }
