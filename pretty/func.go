@@ -6,7 +6,7 @@ package pretty
 import (
   "fmt"
   "bytes"
-  "github.com/glhrmfrts/elo-lang/elo"
+  elo "github.com/glhrmfrts/elo-lang"
 )
 
 func doIndent(buf *bytes.Buffer, indent int) {

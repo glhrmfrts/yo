@@ -4,9 +4,9 @@ import (
   "fmt"
   "os"
   "io/ioutil"
-	"github.com/glhrmfrts/elo-lang/elo/parse"
-  "github.com/glhrmfrts/elo-lang/elo/pretty"
-  "github.com/glhrmfrts/elo-lang/elo"
+	"github.com/glhrmfrts/elo-lang/parse"
+  "github.com/glhrmfrts/elo-lang/pretty"
+  _ "github.com/glhrmfrts/elo-lang"
 )
 
 func main() {
@@ -24,6 +24,7 @@ func main() {
 
   fmt.Println(pretty.SyntaxTree(root, 2))
 
+/*
   code, err := elo.Compile(root, filename)
   if err != nil {
     fmt.Println(err.Error())
@@ -31,4 +32,5 @@ func main() {
   }
 
   fmt.Println(pretty.Disasm(code))
+*/
 }

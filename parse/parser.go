@@ -4,7 +4,7 @@ package parse
 import (
   "fmt"
   "strconv"
-  "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/ast"
 )
 
 type parser struct {
@@ -461,6 +461,19 @@ func (p *parser) callExpr() ast.Node {
   return p.selectorOrSubscriptExpr(left)
 }
 
+func (p *parser) postfixExpr() ast.Node {
+  line := p.line()
+  left := p.callExpr()
+
+  if ast.IsPostfixOp(p.tok) {
+    op := p.tok
+    p.next()
+    return &ast.PostfixExpr{Op: op, Left: left, NodeInfo: ast.NodeInfo{line}}
+  }
+
+  return left
+}
+
 func (p *parser) unaryExpr() ast.Node {
   line := p.line()
   if ast.IsUnaryOp(p.tok) {
@@ -471,12 +484,12 @@ func (p *parser) unaryExpr() ast.Node {
     if op == ast.T_NOT {
       right = p.expr()
     } else {
-      right = p.callExpr()
+      right = p.postfixExpr()
     }
     return &ast.UnaryExpr{Op: op, Right: right, NodeInfo: ast.NodeInfo{line}}
   }
 
-  return p.callExpr()
+  return p.postfixExpr()
 }
 
 // parse a binary expression using the legendary wikipedia's algorithm :)
@@ -634,8 +647,13 @@ func (p *parser) forIteratorStmt(id *ast.Id) ast.Node {
   p.next() // 'in'
 
   coll := p.expr()
+
+  var when ast.Node
+  if p.accept(ast.T_WHEN) {
+    when = p.expr()
+  }
   body := p.block()
-  return &ast.ForIteratorStmt{Iterator: id, Collection: coll, Body: body, NodeInfo: ast.NodeInfo{line}}
+  return &ast.ForIteratorStmt{Iterator: id, Collection: coll, When: when, Body: body, NodeInfo: ast.NodeInfo{line}}
 }
 
 func (p *parser) forStmt() ast.Node {
@@ -657,6 +675,7 @@ func (p *parser) forStmt() ast.Node {
       p.errorExpected("';'")
     }
     if p.tok == ast.T_LBRACE {
+      cond = nil
       goto parseBody
     }
     cond = p.expr()  

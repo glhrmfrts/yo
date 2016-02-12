@@ -14,6 +14,7 @@ const (
   T_IF
   T_ELSE
   T_FOR
+  T_WHEN
   T_FUNC
   T_CONST
   T_VAR
@@ -69,6 +70,8 @@ const (
   T_MOD
   binaryOpEnd
 
+  T_PLUSPLUS
+  T_MINUSMINUS
   T_EQGT
   T_COLON
   T_SEMICOLON
@@ -95,6 +98,7 @@ var (
     "if": T_IF,
     "else": T_ELSE,
     "for": T_FOR,
+    "when": T_WHEN,
     "func": T_FUNC,
     "const": T_CONST,
     "var": T_VAR,
@@ -116,6 +120,7 @@ var (
     T_ELSE: "else",
     T_FOR: "for",
     T_FUNC: "func",
+    T_WHEN: "when",
     T_CONST: "const",
     T_VAR: "var",
     T_BREAK: "break",
@@ -155,6 +160,8 @@ var (
     T_PIPEEQ: "|=",
     T_TILDEEQ: "^=",
     T_EQEQ: "==",
+    T_PLUSPLUS: "++",
+    T_MINUSMINUS: "--",
     T_EQGT: "=>",
     T_COLON: ":",
     T_SEMICOLON: ";",
@@ -187,8 +194,13 @@ func Keyword(lit string) (Token, bool) {
   return t, ok
 }
 
+func IsPostfixOp(tok Token) bool {
+  return (tok == T_PLUSPLUS || tok == T_MINUSMINUS)
+}
+
 func IsUnaryOp(tok Token) bool {
-  return (tok == T_NOT || tok == T_BANG || tok == T_MINUS || tok == T_PLUS || tok == T_TILDE)
+  return IsPostfixOp(tok) || 
+    (tok == T_NOT || tok == T_BANG || tok == T_MINUS || tok == T_PLUS || tok == T_TILDE)
 }
 
 func IsBinaryOp(tok Token) bool {

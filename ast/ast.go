@@ -100,6 +100,12 @@ type (
     Args  []Node
   }
 
+  PostfixExpr struct {
+    NodeInfo
+    Op   Token
+    Left Node
+  }
+
   UnaryExpr struct {
     NodeInfo
     Op    Token
@@ -160,6 +166,7 @@ type (
     NodeInfo
     Iterator   *Id
     Collection Node
+    When       Node
     Body       Node
   }
 
@@ -236,6 +243,10 @@ func (node *VarArg) Accept(v Visitor, data interface{}) {
 
 func (node *CallExpr) Accept(v Visitor, data interface{}) {
   v.VisitCallExpr(node, data)
+}
+
+func (node *PostfixExpr) Accept(v Visitor, data interface{}) {
+  v.VisitPostfixExpr(node, data)
 }
 
 func (node *UnaryExpr) Accept(v Visitor, data interface{}) {

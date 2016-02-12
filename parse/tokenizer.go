@@ -11,7 +11,7 @@ import (
   "unicode/utf8"
   "os"
   "fmt"
-  "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/ast"
 )
 
 type tokenizer struct {
@@ -351,9 +351,10 @@ func (t *tokenizer) scan() (ast.Token, string) {
 
     switch t.r {
     case '\n': tok = ast.T_NEWLINE
-    case '+': tok = t.maybe1(ast.T_PLUS, '=', ast.T_PLUSEQ)
-    case '-': tok = t.maybe1(ast.T_MINUS, '=', ast.T_MINUSEQ)
+    case '+': tok = t.maybe2(ast.T_PLUS, '=', ast.T_PLUSEQ, '+', ast.T_PLUSPLUS)
+    case '-': tok = t.maybe2(ast.T_MINUS, '=', ast.T_MINUSEQ, '-', ast.T_MINUSMINUS)
     case '*': tok = t.maybe2(ast.T_TIMES, '=', ast.T_TIMESEQ, '*', ast.T_TIMESTIMES)
+    case '%': tok = ast.T_MOD
     case '&': tok = t.maybe2(ast.T_AMP, '=', ast.T_AMPEQ, '&', ast.T_AMPAMP)
     case '|': tok = t.maybe2(ast.T_PIPE, '=', ast.T_PIPEEQ, '|', ast.T_PIPEPIPE)
     case '^': tok = t.maybe1(ast.T_TILDE, '=', ast.T_TILDEEQ)

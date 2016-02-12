@@ -3,7 +3,7 @@ package elo
 import (
   "fmt"
   "math"
-  "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/ast"
 )
 
 type (
@@ -723,6 +723,10 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
   }
 
   c.emitABC(OP_CALL, callerReg, resultCount, len(node.Args), node.NodeInfo.Line)
+}
+
+func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
+  
 }
 
 func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {

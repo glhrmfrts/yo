@@ -21,6 +21,7 @@ type Visitor interface {
   VisitKwArg(node *KwArg, data interface{})
   VisitVarArg(node *VarArg, data interface{})
   VisitCallExpr(node *CallExpr, data interface{})
+  VisitPostfixExpr(node *PostfixExpr, data interface{})
   VisitUnaryExpr(node *UnaryExpr, data interface{})
   VisitBinaryExpr(node *BinaryExpr, data interface{})
   VisitTernaryExpr(node *TernaryExpr, data interface{})

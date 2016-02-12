@@ -5,7 +5,7 @@ package pretty
 import (
   "fmt"
   "bytes"
-  "github.com/glhrmfrts/elo-lang/elo/ast"
+  "github.com/glhrmfrts/elo-lang/ast"
 )
 
 type prettyprinter struct {
@@ -202,6 +202,18 @@ func (p *prettyprinter) VisitCallExpr(node *ast.CallExpr, data interface{}) {
   p.buf.WriteString(")")
 }
 
+func (p *prettyprinter) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
+  p.buf.WriteString(fmt.Sprintf("(postfix %s\n", node.Op))
+
+  p.indent++
+  p.doIndent()
+
+  node.Left.Accept(p, nil)
+
+  p.indent--
+  p.buf.WriteString(")")
+}
+
 func (p *prettyprinter) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
   p.buf.WriteString(fmt.Sprintf("(unary %s\n", node.Op))
   
@@ -363,6 +375,12 @@ func (p *prettyprinter) VisitForIteratorStmt(node *ast.ForIteratorStmt, data int
   p.buf.WriteString("\n")
   p.doIndent()
   node.Collection.Accept(p, nil)
+
+  if node.When != nil {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    node.When.Accept(p, nil)
+  }
 
   p.buf.WriteString("\n")
   p.doIndent()
