@@ -16,7 +16,7 @@ const (
 type (
   Value interface {
     // manual type retrieval seems to be faster than
-    // go's interface type assertion
+    // go's interface type assertion (runtime.I2T2)
     Type() ValueType
     assertFloat64() (float64, bool)
     assertBool() (bool, bool)
@@ -34,8 +34,19 @@ type (
 
   // String also maps directly to string
   String string
-)
 
+  // Array is an array of values
+  Array []Value
+
+  // Object has a parent and it's fields
+  Object struct {
+    Parent *Object
+    Fields map[string]Value
+  }
+
+  // Channel is a channel that sends and receive values
+  Channel chan Value
+)
 
 func (v Nil) Type() ValueType                { return VALUE_NIL }
 func (v Nil) assertFloat64() (float64, bool) { return 0, false }

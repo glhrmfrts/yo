@@ -47,7 +47,7 @@ const (
   OP_MOVE                   //  R(A) = R(B)
   OP_GET                    //  R(A) = R(B)[RK(C)]
   OP_SET                    //  R(A)[RK(B)] = RK(C)
-  OP_APPEND                 //  R(A) = append(R(A), R(A+1) ... R(A+Bx))
+  OP_APPEND                 //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
   OP_CALL                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
   OP_ARRAY                  //  R(A) = []
@@ -57,6 +57,7 @@ const (
   OP_JMP                    //  pc = pc + sBx
   OP_JMPTRUE                //  pc = pc + sBx if RK(A) is not false or nil
   OP_JMPFALSE               //  pc = pc + sBx if RK(A) is false or nil
+  OP_RETURN                 //  return R(A) ... R(A+B-1)
 )
 
 // instruction parameters
@@ -118,6 +119,7 @@ var (
     OP_JMP: "JMP",
     OP_JMPTRUE: "JMPTRUE",
     OP_JMPFALSE: "JMPFALSE",
+    OP_RETURN: "RETURN",
   }
 )
 

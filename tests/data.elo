@@ -1,3 +1,18 @@
 // test data structures
 
-a := nil ? 5 : 2
+fmt, strings := import("fmt"), import("strings")
+
+func Person.add(p, other) {
+  fmt.println(p.name, other.name)
+}
+
+func Person.sub(p, other) {
+  other.marry(p)
+  return p, other.call()
+}
+
+strings.repeat(s, "lahjsda")
+
+return {
+  Person: Person,
+}

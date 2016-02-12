@@ -37,11 +37,13 @@ type (
 
   // lexical block structure for compiler
   compilerblock struct {
-    context    blockcontext
-    register int
-    names      map[string]*nameinfo
-    proto      *FuncProto
-    parent     *compilerblock
+    context       blockcontext
+    start         uint32
+    register      int
+    pendingBreaks []uint32
+    names         map[string]*nameinfo
+    proto         *FuncProto
+    parent        *compilerblock
   }
 
   compiler struct {
@@ -70,7 +72,7 @@ const (
 const kArrayMaxRegisters = 10
 
 func (err *CompileError) Error() string {
-  return fmt.Sprintf("%s:%d: error: %s", err.File, err.Line, err.Message)
+  return fmt.Sprintf("%s:%d: %s", err.File, err.Line, err.Message)
 }
 
 //
@@ -170,6 +172,25 @@ func (c *compiler) genRegister() int {
   id := c.block.register
   c.block.register++
   return id
+}
+
+func (c *compiler) enterBlock(context blockcontext) {
+  assert(c.block != nil, "c.block enterBlock")
+  block := newCompilerBlock(c.block.proto, context, c.block)
+  block.start = block.proto.NumCode
+  block.register = c.block.register
+  c.block = block
+}
+
+func (c *compiler) leaveBlock() {
+  block := c.block
+  if block.context == kBlockContextLoop {
+    end := block.proto.NumCode
+    for _, index := range block.pendingBreaks {
+      c.modifyABx(int(index), OP_JMP, 0, int(end - index))
+    }
+  }
+  c.block = block.parent
 }
 
 // Add a constant to the current prototype's constant pool
@@ -368,21 +389,48 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
       c.emitABx(op, valueReg, c.addConst(String(v.Value)), v.NodeInfo.Line)
     }
   case *ast.Subscript:
-    arrData := exprdata{true, assignReg + 1, assignReg + 1}
+    arrData := exprdata{true, assignReg, assignReg}
     v.Left.Accept(c, &arrData)
     arrReg := arrData.regb
 
-    subData := exprdata{true, assignReg + 1, assignReg + 1}
+    subData := exprdata{true, assignReg, assignReg}
     v.Right.Accept(c, &subData)
     subReg := subData.regb
     c.emitABC(OP_SET, arrReg, subReg, valueReg, v.NodeInfo.Line)
   case *ast.Selector:
-    objData := exprdata{true, assignReg + 1, assignReg + 1}
+    objData := exprdata{true, assignReg, assignReg}
     v.Left.Accept(c, &objData)
     objReg := objData.regb
     key := OpConstOffset + c.addConst(String(v.Value))
 
     c.emitABC(OP_SET, objReg, key, valueReg, v.NodeInfo.Line)
+  }
+}
+
+func (c *compiler) branchConditionHelper(cond, then, else_ ast.Node, reg int) {
+  ternaryData := exprdata{true, reg + 1, reg + 1}
+  cond.Accept(c, &ternaryData)
+  condr := ternaryData.regb
+  jmpInstr := c.emitABx(OP_JMPFALSE, condr, 0, c.lastLine)
+  thenLabel := c.newLabel()
+
+  ternaryData = exprdata{false, reg, reg}
+  then.Accept(c, &ternaryData)
+  successInstr := c.emitABx(OP_JMP, 0, 0, c.lastLine)
+
+  c.modifyABx(jmpInstr, OP_JMPFALSE, condr, c.labelOffset(thenLabel))
+  elseLabel := c.newLabel()
+
+  ternaryData = exprdata{false, reg, reg}
+  else_.Accept(c, &ternaryData)
+
+  c.modifyABx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+}
+
+func (c *compiler) functionReturnGuard() {
+  last := c.block.proto.Code[c.block.proto.NumCode-1]
+  if OpGetOpcode(last) != OP_RETURN {
+    c.emitAB(OP_RETURN, 0, 0, c.lastLine)
   }
 }
 
@@ -514,7 +562,7 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
       exprdata := exprdata{false, reg + i + 1, reg + i + 1}
       el.Accept(c, &exprdata)
     }
-    c.emitABx(OP_APPEND, reg, end, node.NodeInfo.Line)
+    c.emitAB(OP_APPEND, reg, end, node.NodeInfo.Line)
   }
   if exprok && expr.propagate {
     expr.regb = reg
@@ -580,6 +628,7 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
   }
 
   node.Body.Accept(c, nil)
+  c.functionReturnGuard()
 
   c.block = c.block.parent
   c.emitABx(OP_FUNC, reg, index, node.NodeInfo.Line)
@@ -807,23 +856,7 @@ func (c *compiler) VisitTernaryExpr(node *ast.TernaryExpr, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  ternaryData := exprdata{true, reg + 1, reg + 1}
-  node.Cond.Accept(c, &ternaryData)
-  cond := ternaryData.regb
-  jmpInstr := c.emitABx(OP_JMPFALSE, cond, 0, node.NodeInfo.Line)
-  thenLabel := c.newLabel()
-
-  ternaryData = exprdata{false, reg, reg}
-  node.Then.Accept(c, &ternaryData)
-  successInstr := c.emitABx(OP_JMP, 0, 0, node.NodeInfo.Line)
-
-  c.modifyABx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(thenLabel))
-  elseLabel := c.newLabel()
-
-  ternaryData = exprdata{false, reg, reg}
-  node.Else.Accept(c, &ternaryData)
-
-  c.modifyABx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+  c.branchConditionHelper(node.Cond, node.Then, node.Else, reg)
 }
 
 // VisitDeclaration generates code for variable declaration.
@@ -892,20 +925,44 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
     if valueReg >= current {
       break
     }
-    c.assignmentHelper(variable, current, valueReg)
+    c.assignmentHelper(variable, current + 1, valueReg)
   }
 }
 
 func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
-
+  if c.block.context != kBlockContextLoop {
+    c.error(node.NodeInfo.Line, fmt.Sprintf("%s outside loop", node.Type))
+  }
+  switch node.Type {
+  case ast.T_CONTINUE:
+    index := c.block.proto.NumCode
+    c.emitABx(OP_JMP, 0, int(index - c.block.start), node.NodeInfo.Line)
+  case ast.T_BREAK:
+    instr := c.emitABx(OP_JMP, 0, 0, node.NodeInfo.Line)
+    c.block.pendingBreaks = append(c.block.pendingBreaks, uint32(instr))
+  }
 }
 
 func (c *compiler) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) {
-
+  start := c.block.register
+  for _, v := range node.Values {
+    reg := c.genRegister()
+    data := exprdata{false, reg, reg}
+    v.Accept(c, &data)
+  }
+  c.emitAB(OP_RETURN, start, len(node.Values), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitIfStmt(node *ast.IfStmt, data interface{}) {
- 
+  _, ok := data.(*exprdata)
+  if !ok {
+    c.enterBlock(kBlockContextBranch)
+    defer c.leaveBlock()
+  }
+  if node.Init != nil {
+    node.Init.Accept(c, nil)
+  }
+  c.branchConditionHelper(node.Cond, node.Body, node.Else, c.block.register)
 }
 
 func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interface{}) {
@@ -947,6 +1004,7 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
   c.block = newCompilerBlock(c.mainFunc, kBlockContextFunc, nil)
   
   root.Accept(&c, nil)
+  c.functionReturnGuard()
 
   res = c.mainFunc
   return

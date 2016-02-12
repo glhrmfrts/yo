@@ -1,0 +1,13 @@
+// test control-flow structures
+
+c := 6
+
+if true {
+  a := 2
+} else {
+  b := 5
+}
+
+a := "alskdas"
+
+break

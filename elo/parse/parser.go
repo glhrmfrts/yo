@@ -22,7 +22,7 @@ type ParseError struct {
 }
 
 func (err *ParseError) Error() string {
-  return fmt.Sprintf("%s:%d: syntax error: %s", err.File, err.Line, err.Message)
+  return fmt.Sprintf("%s:%d: %s", err.File, err.Line, err.Message)
 }
 
 //

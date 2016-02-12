@@ -1,7 +1,7 @@
 SRC = $(wildcard elo/ast/*.go)
 SRC += $(wildcard elo/parse/*.go)
 SRC += $(wildcard elo/pretty/*.go)
-SRC += $(wildcard elo/vm/*.go)
+SRC += $(wildcard elo/*.go)
 OUT = elo
 
 ifdef SystemRoot

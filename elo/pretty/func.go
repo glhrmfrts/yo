@@ -80,9 +80,9 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
       a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
       bstr, cstr := getRegOrConst(b), getRegOrConst(c)
       buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
-    case elo.OP_APPEND:
-      a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
-      buf.WriteString(fmt.Sprintf("\t!%d #%d", a, bx))
+    case elo.OP_APPEND, elo.OP_RETURN:
+      a, b := elo.OpGetA(instr), elo.OpGetB(instr)
+      buf.WriteString(fmt.Sprintf("\t!%d #%d", a, b))
     case elo.OP_MOVE:
       a, b := elo.OpGetA(instr), elo.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
