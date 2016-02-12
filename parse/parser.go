@@ -560,10 +560,13 @@ func (p *parser) declaration() ast.Node {
   return &ast.Declaration{IsConst: isConst, Left: left, Right: right, NodeInfo: ast.NodeInfo{line}}
 }
 
-func (p *parser) assignment() ast.Node {
+func (p *parser) assignment(left []ast.Node) ast.Node {
   line := p.line()
-  left := p.exprList(false)
-  
+
+  if left == nil {
+    left = p.exprList(false)
+  }
+
   if !ast.IsAssignOp(p.tok) {
     if len(left) > 1 {
       p.error("illegal expression")
@@ -609,7 +612,7 @@ func (p *parser) stmt() ast.Node {
   case ast.T_FOR:
     return p.forStmt()
   default:
-    return p.assignment()
+    return p.assignment(nil)
   }
 }
 
@@ -619,7 +622,7 @@ func (p *parser) ifStmt() ast.Node {
 
   var init *ast.Assignment
   var else_ ast.Node
-  cond := p.assignment()
+  cond := p.assignment(nil)
   init, ok := cond.(*ast.Assignment)
   if ok {
     if !p.accept(ast.T_SEMICOLON) {
@@ -636,24 +639,50 @@ func (p *parser) ifStmt() ast.Node {
       else_ = p.ifStmt()
     } else {
       p.errorExpected("if or '{'")
-    }    
+    }  
   }
 
   return &ast.IfStmt{Init: init, Cond: cond, Body: body, Else: else_, NodeInfo: ast.NodeInfo{line}}
 }
 
-func (p *parser) forIteratorStmt(id *ast.Id) ast.Node {
+func (p *parser) forIteratorStmt(ids []ast.Node) ast.Node {
   line := p.line()
-  p.next() // 'in'
 
+  var key *ast.Id
+  var value *ast.Id
+
+  length := len(ids)
+  if length > 2 {
+    p.error("too many identifiers in for iterator statement")
+  }
+
+  ok := p.checkIdList(ids)
+  if !ok {
+    p.error("non-identifier at left-side of 'in' in for iterator statement")
+  } else {
+    key = ids[0].(*ast.Id)
+    if length > 1 {
+      value = ids[1].(*ast.Id)
+    }
+  }
+
+  p.next() // 'in'
   coll := p.expr()
 
   var when ast.Node
   if p.accept(ast.T_WHEN) {
     when = p.expr()
   }
+
   body := p.block()
-  return &ast.ForIteratorStmt{Iterator: id, Collection: coll, When: when, Body: body, NodeInfo: ast.NodeInfo{line}}
+  return &ast.ForIteratorStmt{
+    Key: key,
+    Value: value,
+    Collection: coll, 
+    When: when, 
+    Body: body, 
+    NodeInfo: ast.NodeInfo{line},
+  }
 }
 
 func (p *parser) forStmt() ast.Node {
@@ -661,6 +690,7 @@ func (p *parser) forStmt() ast.Node {
   p.next() // 'for'
 
   var init *ast.Assignment
+  var left []ast.Node
   var cond ast.Node
   var step ast.Node
   var ok bool
@@ -668,7 +698,12 @@ func (p *parser) forStmt() ast.Node {
     goto parseBody
   }
 
-  cond = p.assignment()
+  left = p.exprList(false)
+  if p.tok == ast.T_IN {
+    return p.forIteratorStmt(left)
+  }
+
+  cond = p.assignment(left)
   init, ok = cond.(*ast.Assignment)
   if ok {
     if !p.accept(ast.T_SEMICOLON) {
@@ -679,12 +714,10 @@ func (p *parser) forStmt() ast.Node {
       goto parseBody
     }
     cond = p.expr()  
-  } else if id, ok := cond.(*ast.Id); ok && p.tok == ast.T_IN {
-    return p.forIteratorStmt(id)
   }
 
   if p.accept(ast.T_SEMICOLON) && p.tok != ast.T_LBRACE {
-    step = p.assignment() 
+    step = p.assignment(nil) 
   }
 
 parseBody:

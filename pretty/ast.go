@@ -370,15 +370,25 @@ func (p *prettyprinter) VisitForIteratorStmt(node *ast.ForIteratorStmt, data int
   p.buf.WriteString("(for iterator\n")
   p.indent++
   p.doIndent()
-  node.Iterator.Accept(p, nil)
+  p.buf.WriteString("key: ")
+  node.Key.Accept(p, nil)
+
+  if node.Value != nil {
+    p.buf.WriteString("\n")
+    p.doIndent()
+    p.buf.WriteString("value: ")
+    node.Value.Accept(p, nil)
+  }
 
   p.buf.WriteString("\n")
   p.doIndent()
+  p.buf.WriteString("collection: ")
   node.Collection.Accept(p, nil)
 
   if node.When != nil {
     p.buf.WriteString("\n")
     p.doIndent()
+    p.buf.WriteString("when: ")
     node.When.Accept(p, nil)
   }
 

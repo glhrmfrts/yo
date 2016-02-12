@@ -1,7 +1,5 @@
 // test control-flow structures
 
-for i := 0; i < 5; i++ {
-	if i > 3 {
-		break
-	}
+for i := range(); {
+
 }

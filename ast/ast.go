@@ -164,7 +164,8 @@ type (
 
   ForIteratorStmt struct {
     NodeInfo
-    Iterator   *Id
+    Key        *Id
+    Value      *Id
     Collection Node
     When       Node
     Body       Node
