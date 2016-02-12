@@ -4,7 +4,7 @@ package parse
 import (
   "fmt"
   "strconv"
-  "github.com/glhrmfrts/elo-lang/ast"
+  "github.com/glhrmfrts/elo/ast"
 )
 
 type parser struct {

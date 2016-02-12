@@ -11,7 +11,7 @@ import (
   "unicode/utf8"
   "os"
   "fmt"
-  "github.com/glhrmfrts/elo-lang/ast"
+  "github.com/glhrmfrts/elo/ast"
 )
 
 type tokenizer struct {

@@ -3,7 +3,7 @@ package elo
 import (
   "fmt"
   "math"
-  "github.com/glhrmfrts/elo-lang/ast"
+  "github.com/glhrmfrts/elo/ast"
 )
 
 type (

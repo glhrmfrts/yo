@@ -4,9 +4,9 @@ import (
   "fmt"
   "os"
   "io/ioutil"
-	"github.com/glhrmfrts/elo-lang/parse"
-  "github.com/glhrmfrts/elo-lang/pretty"
-  _ "github.com/glhrmfrts/elo-lang"
+	"github.com/glhrmfrts/elo/parse"
+  "github.com/glhrmfrts/elo/pretty"
+  _ "github.com/glhrmfrts/elo"
 )
 
 func main() {

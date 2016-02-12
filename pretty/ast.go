@@ -5,7 +5,7 @@ package pretty
 import (
   "fmt"
   "bytes"
-  "github.com/glhrmfrts/elo-lang/ast"
+  "github.com/glhrmfrts/elo/ast"
 )
 
 type prettyprinter struct {
