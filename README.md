@@ -17,7 +17,7 @@ The syntax is not well-defined yet, but what it's here should give you an idea o
 
 Because it's heavily inspired in Go, you should almost feel no difference when switching between your compiled code and your script, minus the types.
 ```go
-// Hello world in japanese
+// Hello world in japanese (from google translator!)
 println("こんにちは世界")
 
 // factorial
