@@ -1,3 +1,5 @@
+// Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
+//
 // Pretty-print the AST to a buffer
 
 package pretty

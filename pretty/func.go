@@ -1,3 +1,5 @@
+// Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
+//
 // "Disassemble" a function prototype (bytecode chunk)
 // into a human-readable string
 

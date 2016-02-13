@@ -1,3 +1,5 @@
+// Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
+
 // token types and representations
 
 package ast
