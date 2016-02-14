@@ -6,7 +6,7 @@ List of things that are done and what needs to be.
 - [x] Tokenization
 - [x] Parsing
 - [x] Syntax tree
-- [x] Compilation to bytecode (Partially done, some statements are still not being compiled)
+- [x] Compilation to bytecode
 - [ ] Register machine
 - [ ] Go APIs
 - [ ] Channels and goroutines
