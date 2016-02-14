@@ -43,7 +43,7 @@ fmt := import('fmt')
 ```
 
 Now, the `fmt` variable is an object containing all the public functions and values from the `fmt` module.
-The `import` function returns whatever the requested module returns, for example:
+"Public" is whatever the requested module returns, for example:
 ```go
 // file: fib.elo
 
