@@ -48,7 +48,7 @@ The `import` function returns whatever the requested module returns, for example
 // file: fib.elo
 
 // returns the [n]th number in the fibbonaci sequence
-func nth(_, n) {
+func nth(n) {
   if n <= 1 {
     return n
   }
