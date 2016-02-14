@@ -60,6 +60,12 @@ const (
   OP_JMPTRUE                //  pc = pc + sBx if RK(A) is not false or nil
   OP_JMPFALSE               //  pc = pc + sBx if RK(A) is false or nil
   OP_RETURN                 //  return R(A) ... R(A+B-1)
+  OP_FORBEGIN               // R(A), R(A+1) = objkeys(R(B)), len(objkeys(R(B))) if R(B) is an object
+                            // R(A), R(A+1) = R(B), len(R(B)) if R(B) is an array
+                            // error if not array
+
+  OP_FORITER                // R(A) = R(A+1)++ if R(B) is an array
+                            // R(A) = R(C)[R(A+1)++] if R(B) is an object (R(C) should be an array of keys of the object)
 )
 
 // instruction parameters
@@ -123,6 +129,8 @@ var (
     OP_JMPTRUE: "JMPTRUE",
     OP_JMPFALSE: "JMPFALSE",
     OP_RETURN: "RETURN",
+    OP_FORBEGIN: "FORBEGIN",
+    OP_FORITER: "FORITER",
   }
 )
 

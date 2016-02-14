@@ -1,5 +1,5 @@
 // test control-flow structures
 
-for i := range(); {
-
+for v in [1, 2, 3] {
+  
 }

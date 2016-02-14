@@ -191,6 +191,10 @@ func (c *compiler) genRegister() int {
   return id
 }
 
+func (c *compiler) declareLocalVar(name string, reg int) {
+  c.block.addNameInfo(name, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+}
+
 func (c *compiler) enterBlock(context blockcontext) {
   assert(c.block != nil, "c.block enterBlock")
   block := newCompilerBlock(c.block.proto, context, c.block)
@@ -1041,7 +1045,43 @@ func (c *compiler) VisitIfStmt(node *ast.IfStmt, data interface{}) {
 }
 
 func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interface{}) {
+  c.enterBlock(kBlockContextLoop)
+  defer c.leaveBlock()
+  
+  arrReg := c.genRegister()
+  lenReg := c.genRegister()
+  keyReg := c.genRegister()
+  idxReg := c.genRegister()
+  valReg := c.genRegister()
+  colReg := c.genRegister()
 
+  collectionData := exprdata{false, colReg, colReg}
+  node.Collection.Accept(c, &collectionData)
+  c.emitAB(OP_FORBEGIN, arrReg, colReg, node.NodeInfo.Line)
+  c.emitABx(OP_LOADCONST, idxReg, c.addConst(Number(0)), c.lastLine)
+
+  if node.Value == nil {
+    c.declareLocalVar(node.Key.Value, valReg)
+  } else {
+    c.declareLocalVar(node.Key.Value, keyReg)
+    c.declareLocalVar(node.Value.Value, valReg)
+  }
+
+  testLabel := c.newLabel()
+  testReg := c.block.register
+  c.emitABC(OP_LT, testReg, idxReg, lenReg, c.lastLine)
+  jmpInstr := c.emitAsBx(OP_JMPFALSE, testReg, 0, c.lastLine)
+
+  c.emitABC(OP_FORITER, keyReg, colReg, arrReg, node.NodeInfo.Line)
+  c.emitABC(OP_GET, valReg, colReg, keyReg, c.lastLine)
+
+  node.Body.Accept(c, nil)
+  c.block.loop.continueTarget = c.newLabel()
+
+  c.emitAsBx(OP_JMP, 0, -c.labelOffset(testLabel) - 1, c.lastLine)
+  c.block.loop.breakTarget = c.newLabel()
+
+  c.modifyAsBx(jmpInstr, OP_JMPFALSE, testReg, c.labelOffset(uint32(jmpInstr) + 1))
 }
 
 func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
