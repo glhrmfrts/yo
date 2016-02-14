@@ -1,5 +1,8 @@
 // test control-flow structures
 
-for v in [1, 2, 3] {
-  
+for i, v in [1, 2, 3] {
+  if false {
+    continue
+  }
+  print(v)
 }
