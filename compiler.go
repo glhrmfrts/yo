@@ -698,7 +698,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
   key := OpConstOffset + c.addConst(String(node.Value))
   c.emitABC(OP_GET, reg, objReg, key, node.NodeInfo.Line)
   if exprok && expr.propagate {
-    expr.regb = reg
+    expr.regb = objReg
   }
 }
 
@@ -753,10 +753,25 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     endReg = startReg
     resultCount = 1
   }
-  callerData := exprdata{false, startReg, startReg}
-  node.Left.Accept(c, &callerData)
-  callerReg := callerData.regb
-  assert(startReg == callerReg, "startReg == callerReg")
+
+  argCount := len(node.Args)
+  var op Opcode
+  switch node.Left.(type) {
+  case *ast.Selector:
+    op = OP_CALLMETHOD
+    callerData := exprdata{true, startReg, startReg}
+    node.Left.Accept(c, &callerData)
+    objReg := callerData.regb
+
+    // insert object as first argument
+    endReg += 1
+    argCount += 1
+    c.emitAB(OP_MOVE, endReg, objReg, node.NodeInfo.Line)
+  default:
+    op = OP_CALL
+    callerData := exprdata{false, startReg, startReg}
+    node.Left.Accept(c, &callerData)
+  }
 
   for i, arg := range node.Args {
     reg := endReg + i + 1
@@ -764,7 +779,7 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     arg.Accept(c, &argData)
   }
 
-  c.emitABC(OP_CALL, callerReg, resultCount, len(node.Args), node.NodeInfo.Line)
+  c.emitABC(op, startReg, resultCount, argCount, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {

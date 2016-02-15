@@ -52,6 +52,7 @@ const (
   OP_APPEND                 //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
   OP_CALL                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
+  OP_CALLMETHOD             //  same as OP_CALL, but first argument is the receiver
   OP_ARRAY                  //  R(A) = []
   OP_OBJECT                 //  R(A) = {}
   OP_FUNC                   //  R(A) = func() { proto = funcs[Bx] }
@@ -121,6 +122,7 @@ var (
     OP_APPEND: "APPEND",
 
     OP_CALL: "CALL",
+    OP_CALLMETHOD: "CALLMETHOD",
     OP_ARRAY: "ARRAY",
     OP_OBJECT: "OBJECT",
     OP_FUNC: "FUNC",

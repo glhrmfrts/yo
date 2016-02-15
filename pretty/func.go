@@ -95,9 +95,13 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
     case elo.OP_LOADREF, elo.OP_SETREF:
       a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
       buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
-    case elo.OP_CALL:
+    case elo.OP_CALL, elo.OP_CALLMETHOD:
       a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
-      buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
+      if opcode == elo.OP_CALL {
+        buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
+      } else {
+        buf.WriteString(fmt.Sprintf("!%d #%d #%d", a, b, c))
+      }
     case elo.OP_ARRAY, elo.OP_OBJECT:
       buf.WriteString(fmt.Sprintf("\t!%d", elo.OpGetA(instr)))
     case elo.OP_FUNC:
