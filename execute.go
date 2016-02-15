@@ -1,4 +1,6 @@
-// main intepreter loop
+// Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
+//
+// Main interpreter loop and core operations
 
 package elo
 
@@ -81,6 +83,8 @@ func init() {
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpMove
+      a, b := OpGetA(instr), OpGetB(instr)
+      cf.r[a] = cf.r[b]
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpGet
@@ -167,13 +171,29 @@ func numberArith(op Opcode, a, b float64) float64 {
 }
 
 func execute(state *State) {
+  var currentLine uint32
   cf := state.currentFrame
-  for cf.pc < int(cf.fn.Proto.NumCode) {
-    instr := cf.fn.Proto.Code[cf.pc]
+  proto := cf.fn.Proto
+
+  for cf.pc < int(proto.NumCode) {
+    if currentLine + 1 < proto.NumLines && (cf.pc >= int(proto.Lines[currentLine].Instr)) {
+      currentLine += 1
+    }
+
+    instr := proto.Code[cf.pc]
     cf.pc++
-    opTable[int(instr & kOpcodeMask)](state, cf, instr)
+    cf.line = int(proto.Lines[currentLine].Line)
+    if opTable[int(instr & kOpcodeMask)](state, cf, instr) == 1 {
+      break
+    }
+
+    if state.currentFrame != cf {
+      currentLine = 0
+    }
     cf = state.currentFrame
+    proto = cf.fn.Proto
   }
 
   fmt.Println(cf.r)
+  fmt.Println(cf.line)
 }

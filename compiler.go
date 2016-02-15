@@ -231,6 +231,9 @@ func (c *compiler) insideLoop() bool {
     if block.context == kBlockContextLoop {
       return true
     }
+    if block.context == kBlockContextFunc {
+      return false
+    }
     block = block.parent
   }
   return false

@@ -20,6 +20,7 @@ type (
     // manual type retrieval seems to be faster than
     // go's interface type assertion (runtime.I2T2)
     Type() ValueType
+    String() string
     assertFloat64() (float64, bool)
     assertBool() (bool, bool)
     assertString() (string, bool)

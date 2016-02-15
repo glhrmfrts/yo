@@ -34,6 +34,6 @@ func main() {
 
   fmt.Println(pretty.Disasm(code))
 
-  state := elo.State{}
+  state := elo.NewState()
   state.RunProto(code)
 }

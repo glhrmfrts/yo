@@ -10,6 +10,7 @@ const (
 
 type callFrame struct {
   pc    int
+  line  int
   fn    *Func
   r     [MaxRegisters]Value
 }
@@ -22,6 +23,9 @@ type callFrameStack struct {
 type State struct {
   currentFrame *callFrame
   calls        callFrameStack
+
+  // temporary
+  globals      map[string]Value
 }
 
 
@@ -30,7 +34,7 @@ func (stack *callFrameStack) New() *callFrame {
   return &stack.stack[stack.sp-1]
 }
 
-func (stack *callFrameStack) Back() *callFrame {
+func (stack *callFrameStack) Last() *callFrame {
   if stack.sp == 0 {
     return nil
   }
@@ -42,4 +46,10 @@ func (state *State) RunProto(proto *FuncProto) {
   state.currentFrame.fn = &Func{proto}
 
   execute(state)
+}
+
+func NewState() *State {
+  return &State{
+    globals: make(map[string]Value, 128),
+  }
 }
