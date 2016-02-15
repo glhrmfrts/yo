@@ -1,6 +1,8 @@
 # Elo
 is a dynamic scripting language targeted to be easily embeddable in host Go applications. It's overall design and syntax are inspired from Go itself, so there's almost no learning curve at all if you are already a Go developer.
 
+This is a very early work in progress and a self-learning experience foremost, but pull requests are more than welcome.
+
 ## Status
 List of things that are done and what needs to be.
 - [x] Tokenization
