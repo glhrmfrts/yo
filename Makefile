@@ -10,7 +10,7 @@ ifdef SystemRoot
 endif
 
 $(OUT): $(SRC)
-	@go build -o $@ ./run
+	@go build -gcflags -m -o $@ ./run
 
 clean:
 	@rm $(OUT)

@@ -67,6 +67,7 @@ const (
 
   OpForiter                //  R(A) = R(A+1)++ if R(B) is an array
                             //  R(A) = R(C)[R(A+1)++] if R(B) is an object (R(C) should be an array of keys of the object)
+  kOpCount int = int(OpForiter) + 1
 )
 
 // instruction parameters

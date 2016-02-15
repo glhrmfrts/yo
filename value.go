@@ -25,28 +25,25 @@ type (
     assertString() (string, bool)
   }
 
-  // Nil is just an empty struct
   Nil struct{}
 
-  // Bool maps directly to bool
   Bool bool
 
-  // Number is a double-precision floating point number
   Number float64
 
-  // String also maps directly to string
   String string
 
-  // Array is a slice of values
+  Func struct {
+    Proto *FuncProto
+  }
+
   Array []Value
 
-  // Object has a parent and it's fields
   Object struct {
     Parent *Object
     Fields map[string]Value
   }
 
-  // Channel is a channel that sends and receive values
   Channel chan Value
 )
 
