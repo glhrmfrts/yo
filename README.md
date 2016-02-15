@@ -99,7 +99,7 @@ Note that, unlike some other languages, methods are not functions bound to objec
 ```go
 comparePrice := someBook.comparePrice
 
-// in both cases, 'this' will not be set
+// in both cases, 'this' will be nil
 comparePrice(otherBook)
 someBook["comparePrice"](otherBook)
 ```
