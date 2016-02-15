@@ -9,10 +9,10 @@ import (
 type ValueType int
 
 const (
-  VALUE_NIL ValueType = iota
-  VALUE_BOOL
-  VALUE_NUMBER
-  VALUE_STRING
+  ValueNil ValueType = iota
+  ValueBool
+  ValueNumber
+  ValueString
 )
 
 type (
@@ -37,7 +37,7 @@ type (
   // String also maps directly to string
   String string
 
-  // Array is an array of values
+  // Array is a slice of values
   Array []Value
 
   // Object has a parent and it's fields
@@ -50,7 +50,7 @@ type (
   Channel chan Value
 )
 
-func (v Nil) Type() ValueType                { return VALUE_NIL }
+func (v Nil) Type() ValueType                { return ValueNil }
 func (v Nil) assertFloat64() (float64, bool) { return 0, false }
 func (v Nil) assertBool() (bool, bool)       { return false, false }
 func (v Nil) assertString() (string, bool)   { return "", false }
@@ -59,7 +59,7 @@ func (v Nil) String() string {
   return "nil"
 }
 
-func (v Bool) Type() ValueType                { return VALUE_BOOL }
+func (v Bool) Type() ValueType                { return ValueBool }
 func (v Bool) assertFloat64() (float64, bool) { return 0, false }
 func (v Bool) assertBool() (bool, bool)       { return bool(v), true }
 func (v Bool) assertString() (string, bool)   { return "", false }
@@ -71,7 +71,7 @@ func (v Bool) String() string {
   return "false"
 }
 
-func (v Number) Type() ValueType                { return VALUE_NUMBER }
+func (v Number) Type() ValueType                { return ValueNumber }
 func (v Number) assertFloat64() (float64, bool) { return float64(v), true }
 func (v Number) assertBool() (bool, bool)       { return false, false }
 func (v Number) assertString() (string, bool)   { return "", false }
@@ -80,7 +80,7 @@ func (v Number) String() string {
   return fmt.Sprint(float64(v))
 }
 
-func (v String) Type() ValueType                { return VALUE_STRING }
+func (v String) Type() ValueType                { return ValueString }
 func (v String) assertFloat64() (float64, bool) { return 0, false }
 func (v String) assertBool() (bool, bool)       { return false, false }
 func (v String) assertString() (string, bool)   { return string(v), true }

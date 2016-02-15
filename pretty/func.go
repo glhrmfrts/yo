@@ -70,53 +70,53 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
     buf.WriteString(fmt.Sprint("\t", opcode, "\t"))
 
     switch opcode {
-    case elo.OP_LOADNIL:
+    case elo.OpLoadnil:
       buf.WriteString(fmt.Sprintf("\t!%d !%d", elo.OpGetA(instr), elo.OpGetB(instr)))
-    case elo.OP_LOADCONST:
+    case elo.OpLoadconst:
       buf.WriteString(fmt.Sprintf("!%d %s", elo.OpGetA(instr), f.Consts[elo.OpGetBx(instr)]))
-    case elo.OP_NEG, elo.OP_NOT, elo.OP_CMPL:
+    case elo.OpNeg, elo.OpNot, elo.OpCmpl:
       bx := elo.OpGetBx(instr)
       bstr := getRegOrConst(bx)
       buf.WriteString(fmt.Sprintf("\t!%d %s", elo.OpGetA(instr), bstr))
-    case elo.OP_ADD, elo.OP_SUB, elo.OP_MUL, elo.OP_DIV, elo.OP_POW, elo.OP_SHL, elo.OP_SHR, 
-        elo.OP_AND, elo.OP_OR, elo.OP_XOR, elo.OP_LE, elo.OP_LT, elo.OP_EQ, elo.OP_NE, elo.OP_GET, elo.OP_SET:
+    case elo.OpAdd, elo.OpSub, elo.OpMul, elo.OpDiv, elo.OpPow, elo.OpShl, elo.OpShr, 
+        elo.OpAnd, elo.OpOr, elo.OpXor, elo.OpLe, elo.OpLt, elo.OpEq, elo.OpNe, elo.OpGet, elo.OpSet:
       a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
       bstr, cstr := getRegOrConst(b), getRegOrConst(c)
       buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
-    case elo.OP_APPEND, elo.OP_RETURN:
+    case elo.OpAppend, elo.OpReturn:
       a, b := elo.OpGetA(instr), elo.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d #%d", a, b))
-    case elo.OP_MOVE:
+    case elo.OpMove:
       a, b := elo.OpGetA(instr), elo.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
-    case elo.OP_LOADGLOBAL, elo.OP_SETGLOBAL:
+    case elo.OpLoadglobal, elo.OpSetglobal:
       a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
       buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
-    case elo.OP_LOADREF, elo.OP_SETREF:
+    case elo.OpLoadref, elo.OpSetref:
       a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
       buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
-    case elo.OP_CALL, elo.OP_CALLMETHOD:
+    case elo.OpCall, elo.OpCallmethod:
       a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
-      if opcode == elo.OP_CALL {
+      if opcode == elo.OpCall {
         buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
       } else {
         buf.WriteString(fmt.Sprintf("!%d #%d #%d", a, b, c))
       }
-    case elo.OP_ARRAY, elo.OP_OBJECT:
+    case elo.OpArray, elo.OpObject:
       buf.WriteString(fmt.Sprintf("\t!%d", elo.OpGetA(instr)))
-    case elo.OP_FUNC:
+    case elo.OpFunc:
       buf.WriteString(fmt.Sprintf("\t!%d &%d", elo.OpGetA(instr), elo.OpGetBx(instr)))
-    case elo.OP_JMP:
+    case elo.OpJmp:
       sbx := elo.OpGetsBx(instr)
       buf.WriteString(fmt.Sprintf("\t->%d", pc + sbx))
-    case elo.OP_JMPTRUE, elo.OP_JMPFALSE:
+    case elo.OpJmptrue, elo.OpJmpfalse:
       a, sbx := elo.OpGetA(instr), elo.OpGetsBx(instr)
       astr := getRegOrConst(a)
       buf.WriteString(fmt.Sprintf("%s ->%d", astr, pc + sbx))
-    case elo.OP_FORBEGIN:
+    case elo.OpForbegin:
       a, b := elo.OpGetA(instr), elo.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("!%d !%d", a, b))
-    case elo.OP_FORITER:
+    case elo.OpForiter:
       a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d !%d", a, b, c))
     }

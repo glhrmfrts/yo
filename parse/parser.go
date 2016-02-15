@@ -32,7 +32,7 @@ func (err *ParseError) Error() string {
 //
 
 func parseNumber(typ ast.Token, str string) float64 {
-  if typ == ast.T_FLOAT {
+  if typ == ast.TokenFloat {
     f, err := strconv.ParseFloat(str, 64)
     if err != nil {
       panic(err)
@@ -63,7 +63,7 @@ func (p *parser) line() int {
 func (p *parser) next() {
   p.tok, p.literal = p.tokenizer.nextToken()
 
-  for p.ignoreNewlines && p.tok == ast.T_NEWLINE {
+  for p.ignoreNewlines && p.tok == ast.TokenNewline {
     p.tok, p.literal = p.tokenizer.nextToken()
   }
 }
@@ -87,11 +87,11 @@ func (p *parser) makeSelector(left ast.Node) *ast.Selector {
 func (p *parser) idList() []*ast.Id {
   var list []*ast.Id
 
-  for p.tok == ast.T_ID {
+  for p.tok == ast.TokenId {
     list = append(list, &ast.Id{Value: p.literal})
 
     p.next()
-    if !p.accept(ast.T_COMMA) {
+    if !p.accept(ast.TokenComma) {
       break
     }
   }
@@ -135,13 +135,13 @@ func (p *parser) exprList(inArray bool) []ast.Node {
   var list []ast.Node
   for {
     // trailing comma check
-    if inArray && p.tok == ast.T_RBRACK {
+    if inArray && p.tok == ast.TokenRbrack {
       break
     }
 
     expr := p.expr()    
     list = append(list, expr)
-    if !p.accept(ast.T_COMMA) {
+    if !p.accept(ast.TokenComma) {
       break
     }
   }
@@ -157,13 +157,13 @@ func (p *parser) array() ast.Node {
   line := p.line()
   p.next() // '['
 
-  if p.accept(ast.T_RBRACK) {
+  if p.accept(ast.TokenRbrack) {
     // no elements
     return &ast.Array{}
   }
 
   list := p.exprList(true)
-  if !p.accept(ast.T_RBRACK) {
+  if !p.accept(ast.TokenRbrack) {
     p.errorExpected("closing ']'")
   }
 
@@ -174,12 +174,12 @@ func (p *parser) objectFieldList() []*ast.ObjectField {
   var list []*ast.ObjectField
   for {
     // trailing comma check
-    if p.tok == ast.T_RBRACE {
+    if p.tok == ast.TokenRbrace {
       break
     }
 
     var key string
-    if p.tok == ast.T_ID || p.tok == ast.T_STRING {
+    if p.tok == ast.TokenId || p.tok == ast.TokenString {
       key = p.literal
       p.next()
     } else {
@@ -187,14 +187,14 @@ func (p *parser) objectFieldList() []*ast.ObjectField {
     }
 
     line := p.line()
-    if !p.accept(ast.T_COLON) {
+    if !p.accept(ast.TokenColon) {
       list = append(list, &ast.ObjectField{Key: key, NodeInfo: ast.NodeInfo{line}})
     } else {
       value := p.expr() 
       list = append(list, &ast.ObjectField{Key: key, Value: value, NodeInfo: ast.NodeInfo{line}})
     }
 
-    if !p.accept(ast.T_COMMA) {
+    if !p.accept(ast.TokenComma) {
       break
     }
   }
@@ -206,13 +206,13 @@ func (p *parser) object() ast.Node {
   line := p.line()
   p.next() // '{'
 
-  if p.accept(ast.T_RBRACE) {
+  if p.accept(ast.TokenRbrace) {
     // no elements
     return &ast.Object{}
   }
 
   fields := p.objectFieldList()  
-  if !p.accept(ast.T_RBRACE) {
+  if !p.accept(ast.TokenRbrace) {
     p.errorExpected("closing '}'")
   }
 
@@ -220,18 +220,18 @@ func (p *parser) object() ast.Node {
 }
 
 func (p *parser) functionArgs() []ast.Node {
-  if !p.accept(ast.T_LPAREN) {
+  if !p.accept(ast.TokenLparen) {
     p.errorExpected("'('")
   }
   
   var list []ast.Node
-  if p.accept(ast.T_RPAREN) {
+  if p.accept(ast.TokenRparen) {
     // no arguments
     return list
   }
 
   var vararg, kwarg bool
-  for p.tok == ast.T_ID {
+  for p.tok == ast.TokenId {
     if vararg {
       p.error("argument after variadic argument")
     }
@@ -242,11 +242,11 @@ func (p *parser) functionArgs() []ast.Node {
     p.next()
 
     // '='
-    if p.accept(ast.T_EQ) {
+    if p.accept(ast.TokenEq) {
       value := p.expr() 
       arg = &ast.KwArg{Key: id.Value, Value: value, NodeInfo: ast.NodeInfo{line}}
       kwarg = true
-    } else if p.accept(ast.T_DOTDOTDOT) {
+    } else if p.accept(ast.TokenDotdotdot) {
       arg = &ast.VarArg{Arg: id, NodeInfo: ast.NodeInfo{line}}
       vararg = true
     } else {
@@ -260,12 +260,12 @@ func (p *parser) functionArgs() []ast.Node {
     }
 
     list = append(list, arg)
-    if !p.accept(ast.T_COMMA) {
+    if !p.accept(ast.TokenComma) {
       break
     }
   }
 
-  if !p.accept(ast.T_RPAREN) {
+  if !p.accept(ast.TokenRparen) {
     p.errorExpected("closing ')'")
   }
   return list
@@ -273,7 +273,7 @@ func (p *parser) functionArgs() []ast.Node {
 
 func (p *parser) functionBody() ast.Node {
   line := p.line()
-  if p.accept(ast.T_TILDE) {
+  if p.accept(ast.TokenTilde) {
     // '^' curried function
     args := p.functionArgs()
     body := p.functionBody()
@@ -283,7 +283,7 @@ func (p *parser) functionBody() ast.Node {
       Nodes: []ast.Node{ &ast.ReturnStmt{Values: []ast.Node{fn}, NodeInfo: ast.NodeInfo{line}} },
       NodeInfo: ast.NodeInfo{line},
     }
-  } else if p.accept(ast.T_EQGT) {
+  } else if p.accept(ast.TokenEqgt) {
     // '=>' short function
     list := p.exprList(false)
     
@@ -291,7 +291,7 @@ func (p *parser) functionBody() ast.Node {
       Nodes: []ast.Node{ &ast.ReturnStmt{Values: list, NodeInfo: ast.NodeInfo{line}} },
       NodeInfo: ast.NodeInfo{line},
     }
-  } else if p.tok == ast.T_LBRACE {
+  } else if p.tok == ast.TokenLbrace {
     // '{' regular function body
     return p.block()
   }
@@ -305,7 +305,7 @@ func (p *parser) function() ast.Node {
   p.next() // 'func'
 
   var name ast.Node
-  if p.tok != ast.T_LPAREN {
+  if p.tok != ast.TokenLparen {
     name = p.selectorOrSubscriptExpr(nil)
     if !p.checkLhs(name) {
       p.error("function name must be assignable")
@@ -323,16 +323,16 @@ func (p *parser) primaryExpr() ast.Node {
   // handle the ending token themselves, so 'defer p.next()'
   // needs to be after them
   switch p.tok {
-  case ast.T_FUNC:
+  case ast.TokenFunc:
     return p.function()
-  case ast.T_LBRACK:
+  case ast.TokenLbrack:
     return p.array()
-  case ast.T_LBRACE:
+  case ast.TokenLbrace:
     return p.object()
-  case ast.T_LPAREN:
+  case ast.TokenLparen:
     p.next()
     expr := p.expr()
-    if !p.accept(ast.T_RPAREN) {
+    if !p.accept(ast.TokenRparen) {
       p.errorExpected("closing ')'")
     }
 
@@ -340,15 +340,15 @@ func (p *parser) primaryExpr() ast.Node {
   default:
     defer p.next()
     switch p.tok {
-    case ast.T_INT, ast.T_FLOAT:
+    case ast.TokenInt, ast.TokenFloat:
       return &ast.Number{Value: parseNumber(p.tok, p.literal), NodeInfo: ast.NodeInfo{line}}
-    case ast.T_ID:
+    case ast.TokenId:
       return &ast.Id{Value: p.literal, NodeInfo: ast.NodeInfo{line}}
-    case ast.T_STRING:
+    case ast.TokenString:
       return &ast.String{Value: p.literal, NodeInfo: ast.NodeInfo{line}}
-    case ast.T_TRUE, ast.T_FALSE:
-      return &ast.Bool{Value: p.tok == ast.T_TRUE, NodeInfo: ast.NodeInfo{line}}
-    case ast.T_NIL:
+    case ast.TokenTrue, ast.TokenFalse:
+      return &ast.Bool{Value: p.tok == ast.TokenTrue, NodeInfo: ast.NodeInfo{line}}
+    case ast.TokenNil:
       return &ast.Nil{NodeInfo: ast.NodeInfo{line}}
     }
   }
@@ -358,7 +358,7 @@ func (p *parser) primaryExpr() ast.Node {
 }
 
 func (p *parser) selectorExpr(left ast.Node) ast.Node {
-  if !(p.tok == ast.T_ID) {
+  if !(p.tok == ast.TokenId) {
     p.errorExpected("identifier")
   }
 
@@ -370,12 +370,12 @@ func (p *parser) subscriptExpr(left ast.Node) ast.Node {
   line := p.line()
   expr := p.expr()
   sub := &ast.Subscript{Left: left, Right: expr}
-  if p.accept(ast.T_COLON) {
+  if p.accept(ast.TokenColon) {
     expr2 := p.expr()
     sub.Right = &ast.Slice{Start: expr, End: expr2, NodeInfo: ast.NodeInfo{line}}
   }
 
-  if !p.accept(ast.T_RBRACK) {
+  if !p.accept(ast.TokenRbrack) {
     p.errorExpected("closing ']'")
   }
 
@@ -388,12 +388,12 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) ast.Node {
   }
 
   for {
-    if dot, lBrack := p.tok == ast.T_DOT, p.tok == ast.T_LBRACK; dot || lBrack {
+    if dot, lBrack := p.tok == ast.TokenDot, p.tok == ast.TokenLbrack; dot || lBrack {
       line := p.line()
       old := p.ignoreNewlines
       p.ignoreNewlines = false
       p.next()
-      if p.tok == ast.T_NEWLINE || p.tok == ast.T_EOS {
+      if p.tok == ast.TokenNewline || p.tok == ast.TokenEos {
         p.error("expression not terminated")
       }
       p.ignoreNewlines = old
@@ -415,7 +415,7 @@ func (p *parser) selectorOrSubscriptExpr(left ast.Node) ast.Node {
 
 func (p *parser) callArgs() []ast.Node {
   var list []ast.Node
-  if p.tok == ast.T_RPAREN {
+  if p.tok == ast.TokenRparen {
     // no arguments
     return list
   }
@@ -425,7 +425,7 @@ func (p *parser) callArgs() []ast.Node {
     arg := p.expr()
 
     // '='
-    if p.accept(ast.T_EQ) {
+    if p.accept(ast.TokenEq) {
       value := p.expr()
       
 
@@ -434,12 +434,12 @@ func (p *parser) callArgs() []ast.Node {
       } else {
         p.error("non-identifier in left side of keyword argument")
       }
-    } else if p.accept(ast.T_DOTDOTDOT) {
+    } else if p.accept(ast.TokenDotdotdot) {
       arg = &ast.VarArg{Arg: arg, NodeInfo: ast.NodeInfo{line}}
     }
 
     list = append(list, arg)
-    if !p.accept(ast.T_COMMA) {
+    if !p.accept(ast.TokenComma) {
       break
     }
   }
@@ -452,9 +452,9 @@ func (p *parser) callExpr() ast.Node {
   left := p.selectorOrSubscriptExpr(nil)
 
   var args []ast.Node
-  for p.accept(ast.T_LPAREN) {
+  for p.accept(ast.TokenLparen) {
     args = p.callArgs()
-    if !p.accept(ast.T_RPAREN) {
+    if !p.accept(ast.TokenRparen) {
       p.errorExpected("closing ')'")
     }
     left = &ast.CallExpr{Left: left, Args: args, NodeInfo: ast.NodeInfo{line}}
@@ -483,7 +483,7 @@ func (p *parser) unaryExpr() ast.Node {
     p.next()
 
     var right ast.Node
-    if op == ast.T_NOT {
+    if op == ast.TokenNot {
       right = p.expr()
     } else {
       right = p.postfixExpr()
@@ -505,7 +505,7 @@ func (p *parser) binaryExpr(left ast.Node, minPrecedence int) ast.Node {
     old := p.ignoreNewlines
     p.ignoreNewlines = false
     p.next()
-    if p.tok == ast.T_NEWLINE || p.tok == ast.T_EOS {
+    if p.tok == ast.TokenNewline || p.tok == ast.TokenEos {
       p.error("expression not terminated")
     }
     p.ignoreNewlines = old
@@ -526,7 +526,7 @@ func (p *parser) ternaryExpr(left ast.Node) ast.Node {
   p.next() // '?'
 
   whenTrue := p.expr()  
-  if !p.accept(ast.T_COLON) {
+  if !p.accept(ast.TokenColon) {
     p.errorExpected("':'")
   }
 
@@ -538,7 +538,7 @@ func (p *parser) expr() ast.Node {
   left := p.binaryExpr(p.unaryExpr(), 0)
 
   // avoid unecessary calls to ternaryExpr
-  if p.tok == ast.T_QUESTION {
+  if p.tok == ast.TokenQuestion {
     return p.ternaryExpr(left)
   }
 
@@ -547,13 +547,13 @@ func (p *parser) expr() ast.Node {
 
 func (p *parser) declaration() ast.Node {
   line := p.line()
-  isConst := p.tok == ast.T_CONST
+  isConst := p.tok == ast.TokenConst
   p.next()
 
   left := p.idList()
 
   // '='
-  if (!p.accept(ast.T_EQ)) {
+  if (!p.accept(ast.TokenEq)) {
     // a declaration without any values
     return &ast.Declaration{IsConst: isConst, Left: left, NodeInfo: ast.NodeInfo{line}}
   }
@@ -577,7 +577,7 @@ func (p *parser) assignment(left []ast.Node) ast.Node {
   }
 
   // ':='
-  if p.tok == ast.T_COLONEQ {
+  if p.tok == ast.TokenColoneq {
     // a short variable declaration
     if isIdList := p.checkIdList(left); !isIdList {
       p.error("non-identifier at left side of ':='")
@@ -598,20 +598,20 @@ func (p *parser) assignment(left []ast.Node) ast.Node {
 
 func (p *parser) stmt() ast.Node {
   line := p.line()
-  defer p.accept(ast.T_SEMICOLON)
+  defer p.accept(ast.TokenSemicolon)
   switch tok := p.tok; tok {
-  case ast.T_CONST, ast.T_VAR:
+  case ast.TokenConst, ast.TokenVar:
     return p.declaration()
-  case ast.T_BREAK, ast.T_CONTINUE, ast.T_FALLTHROUGH:
+  case ast.TokenBreak, ast.TokenContinue, ast.TokenFallthrough:
     p.next()
     return &ast.BranchStmt{Type: tok, NodeInfo: ast.NodeInfo{line}}
-  case ast.T_RETURN:
+  case ast.TokenReturn:
     p.next()
     values := p.exprList(false)  
     return &ast.ReturnStmt{Values: values, NodeInfo: ast.NodeInfo{line}}
-  case ast.T_IF:
+  case ast.TokenIf:
     return p.ifStmt()
-  case ast.T_FOR:
+  case ast.TokenFor:
     return p.forStmt()
   default:
     return p.assignment(nil)
@@ -627,17 +627,17 @@ func (p *parser) ifStmt() ast.Node {
   cond := p.assignment(nil)
   init, ok := cond.(*ast.Assignment)
   if ok {
-    if !p.accept(ast.T_SEMICOLON) {
+    if !p.accept(ast.TokenSemicolon) {
       p.errorExpected("';'")
     }
     cond = p.expr()  
   }
 
   body := p.block()
-  if p.accept(ast.T_ELSE) {
-    if p.tok == ast.T_LBRACE {
+  if p.accept(ast.TokenElse) {
+    if p.tok == ast.TokenLbrace {
       else_ = p.block()
-    } else if p.tok == ast.T_IF {
+    } else if p.tok == ast.TokenIf {
       else_ = p.ifStmt()
     } else {
       p.errorExpected("if or '{'")
@@ -672,7 +672,7 @@ func (p *parser) forIteratorStmt(ids []ast.Node) ast.Node {
   coll := p.expr()
 
   var when ast.Node
-  if p.accept(ast.T_WHEN) {
+  if p.accept(ast.TokenWhen) {
     when = p.expr()
   }
 
@@ -696,29 +696,29 @@ func (p *parser) forStmt() ast.Node {
   var cond ast.Node
   var step ast.Node
   var ok bool
-  if p.tok == ast.T_LBRACE {
+  if p.tok == ast.TokenLbrace {
     goto parseBody
   }
 
   left = p.exprList(false)
-  if p.tok == ast.T_IN {
+  if p.tok == ast.TokenIn {
     return p.forIteratorStmt(left)
   }
 
   cond = p.assignment(left)
   init, ok = cond.(*ast.Assignment)
   if ok {
-    if !p.accept(ast.T_SEMICOLON) {
+    if !p.accept(ast.TokenSemicolon) {
       p.errorExpected("';'")
     }
-    if p.tok == ast.T_LBRACE {
+    if p.tok == ast.TokenLbrace {
       cond = nil
       goto parseBody
     }
     cond = p.expr()  
   }
 
-  if p.accept(ast.T_SEMICOLON) && p.tok != ast.T_LBRACE {
+  if p.accept(ast.TokenSemicolon) && p.tok != ast.TokenLbrace {
     step = p.assignment(nil) 
   }
 
@@ -729,17 +729,17 @@ parseBody:
 
 func (p *parser) block() ast.Node {
   line := p.line()
-  if !p.accept(ast.T_LBRACE) {
+  if !p.accept(ast.TokenLbrace) {
     p.errorExpected("'{'")
   }
 
   var nodes []ast.Node
-  for !(p.tok == ast.T_RBRACE || p.tok == ast.T_EOS) {
+  for !(p.tok == ast.TokenRbrace || p.tok == ast.TokenEos) {
     stmt := p.stmt()
     nodes = append(nodes, stmt)
   }
 
-  if !p.accept(ast.T_RBRACE) {
+  if !p.accept(ast.TokenRbrace) {
     p.errorExpected("closing '}'")
   }
   return &ast.Block{Nodes: nodes, NodeInfo: ast.NodeInfo{line}}
@@ -747,7 +747,7 @@ func (p *parser) block() ast.Node {
 
 func (p *parser) program() ast.Node {
   var nodes []ast.Node
-  for !(p.tok == ast.T_EOS) {
+  for !(p.tok == ast.TokenEos) {
     stmt := p.stmt()
     nodes = append(nodes, stmt)
   }

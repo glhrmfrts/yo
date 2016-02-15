@@ -2,13 +2,13 @@
 
 fmt, strings := import("fmt"), import("strings")
 
-func Person.add(p, other) {
-  fmt.println(p.name, other.name)
+func Person.add(other) {
+  fmt.println(this.name, other.name)
 }
 
-func Person.sub(p, other) {
-  other.marry(p)
-  return p, other.call()
+func Person.sub(other) {
+  other.marry(this)
+  return this, other.call()
 }
 
 strings.repeat(s, 35)

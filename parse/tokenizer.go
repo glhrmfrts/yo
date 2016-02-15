@@ -146,10 +146,10 @@ func (t *tokenizer) scanMantissa(base int) {
 func (t *tokenizer) scanNumber(seenDecimalPoint bool) (ast.Token, string) {
   // digitVal(t.r) < 10
   offs := t.offset
-  typ := ast.T_INT
+  typ := ast.TokenInt
 
   if seenDecimalPoint {
-    typ = ast.T_FLOAT
+    typ = ast.TokenFloat
     offs--
     t.scanMantissa(10)
     goto exponent
@@ -192,14 +192,14 @@ func (t *tokenizer) scanNumber(seenDecimalPoint bool) (ast.Token, string) {
 
 fraction:
   if t.r == '.' {
-    typ = ast.T_FLOAT
+    typ = ast.TokenFloat
     t.nextChar()
     t.scanMantissa(10)
   }
 
 exponent:
   if t.r == 'e' || t.r == 'E' {
-    typ = ast.T_FLOAT
+    typ = ast.TokenFloat
     t.nextChar()
     if t.r == '-' || t.r == '+' {
       t.nextChar()
@@ -310,8 +310,8 @@ func (t *tokenizer) skipWhitespace() {
 }
 
 func (t *tokenizer) needSemi(tok ast.Token) bool {
-  return (tok == ast.T_ID || tok == ast.T_FLOAT || tok == ast.T_INT || tok == ast.T_STRING || 
-    tok == ast.T_BREAK || tok == ast.T_CONTINUE || tok == ast.T_RETURN)
+  return (tok == ast.TokenId || tok == ast.TokenFloat || tok == ast.TokenInt || tok == ast.TokenString || 
+    tok == ast.TokenBreak || tok == ast.TokenContinue || tok == ast.TokenReturn)
 }
 
 // functions that look 1 or 2 characters ahead,
@@ -356,12 +356,12 @@ func (t *tokenizer) scan() (ast.Token, string) {
     if ok {
       return kwtype, lit
     }
-    return ast.T_ID, lit
+    return ast.TokenId, lit
   case isDigit(t.r):
     return t.scanNumber(false)
   case t.r == '\'' || t.r == '"':
     t.nextChar()
-    return ast.T_STRING, t.scanString(ch)
+    return ast.TokenString, t.scanString(ch)
   default:
     if t.r == '/' {
       t.nextChar()
@@ -371,37 +371,37 @@ func (t *tokenizer) scan() (ast.Token, string) {
 
       if t.r == '=' {
         t.nextChar()
-        return ast.T_DIVEQ, "/="
+        return ast.TokenDiveq, "/="
       }
-      return ast.T_DIV, "/"
+      return ast.TokenDiv, "/"
     }
 
     tok := ast.Token(-1)
     offs := t.offset
 
     switch t.r {
-    case '\n': tok = ast.T_NEWLINE
-    case '+': tok = t.maybe2(ast.T_PLUS, '=', ast.T_PLUSEQ, '+', ast.T_PLUSPLUS)
-    case '-': tok = t.maybe2(ast.T_MINUS, '=', ast.T_MINUSEQ, '-', ast.T_MINUSMINUS)
-    case '*': tok = t.maybe2(ast.T_TIMES, '=', ast.T_TIMESEQ, '*', ast.T_TIMESTIMES)
-    case '%': tok = ast.T_MOD
-    case '&': tok = t.maybe2(ast.T_AMP, '=', ast.T_AMPEQ, '&', ast.T_AMPAMP)
-    case '|': tok = t.maybe2(ast.T_PIPE, '=', ast.T_PIPEEQ, '|', ast.T_PIPEPIPE)
-    case '^': tok = t.maybe1(ast.T_TILDE, '=', ast.T_TILDEEQ)
-    case '<': tok = t.maybe2(ast.T_LT, '=', ast.T_LTEQ, '<', ast.T_LTLT)
-    case '>': tok = t.maybe2(ast.T_GT, '=', ast.T_GTEQ, '>', ast.T_GTGT)
-    case '=': tok = t.maybe2(ast.T_EQ, '=', ast.T_EQEQ, '>', ast.T_EQGT)
-    case ':': tok = t.maybe1(ast.T_COLON, '=', ast.T_COLONEQ)
-    case ';': tok = ast.T_SEMICOLON
-    case ',': tok = ast.T_COMMA
-    case '!': tok = t.maybe1(ast.T_BANG, '=', ast.T_BANGEQ)
-    case '?': tok = ast.T_QUESTION
-    case '(': tok = ast.T_LPAREN
-    case ')': tok = ast.T_RPAREN
-    case '[': tok = ast.T_LBRACK
-    case ']': tok = ast.T_RBRACK
-    case '{': tok = ast.T_LBRACE
-    case '}': tok = ast.T_RBRACE
+    case '\n': tok = ast.TokenNewline
+    case '+': tok = t.maybe2(ast.TokenPlus, '=', ast.TokenPluseq, '+', ast.TokenPlusplus)
+    case '-': tok = t.maybe2(ast.TokenMinus, '=', ast.TokenMinuseq, '-', ast.TokenMinusminus)
+    case '*': tok = t.maybe2(ast.TokenTimes, '=', ast.TokenTimeseq, '*', ast.TokenTimestimes)
+    case '%': tok = ast.TokenMod
+    case '&': tok = t.maybe2(ast.TokenAmp, '=', ast.TokenAmpeq, '&', ast.TokenAmpamp)
+    case '|': tok = t.maybe2(ast.TokenPipe, '=', ast.TokenPipeeq, '|', ast.TokenPipepipe)
+    case '^': tok = t.maybe1(ast.TokenTilde, '=', ast.TokenTildeeq)
+    case '<': tok = t.maybe2(ast.TokenLt, '=', ast.TokenLteq, '<', ast.TokenLtlt)
+    case '>': tok = t.maybe2(ast.TokenGt, '=', ast.TokenGteq, '>', ast.TokenGtgt)
+    case '=': tok = t.maybe2(ast.TokenEq, '=', ast.TokenEqeq, '>', ast.TokenEqgt)
+    case ':': tok = t.maybe1(ast.TokenColon, '=', ast.TokenColoneq)
+    case ';': tok = ast.TokenSemicolon
+    case ',': tok = ast.TokenComma
+    case '!': tok = t.maybe1(ast.TokenBang, '=', ast.TokenBangeq)
+    case '?': tok = ast.TokenQuestion
+    case '(': tok = ast.TokenLparen
+    case ')': tok = ast.TokenRparen
+    case '[': tok = ast.TokenLbrack
+    case ']': tok = ast.TokenRbrack
+    case '{': tok = ast.TokenLbrace
+    case '}': tok = ast.TokenRbrace
     case '.':
       t.nextChar()
       if isDigit(t.r) {
@@ -410,10 +410,10 @@ func (t *tokenizer) scan() (ast.Token, string) {
         t.nextChar()
         if t.r == '.' {
           t.nextChar()
-          return ast.T_DOTDOTDOT, "..."
+          return ast.TokenDotdotdot, "..."
         }
       } else {
-        return ast.T_DOT, "."
+        return ast.TokenDot, "."
       }
     }
 
@@ -424,21 +424,21 @@ func (t *tokenizer) scan() (ast.Token, string) {
   }
 
   if t.offset >= len(t.src) {
-    return ast.T_EOS, "end"
+    return ast.TokenEos, "end"
   }
 
   fmt.Print(string(t.r))
-  return ast.T_ILLEGAL, ""
+  return ast.TokenIllegal, ""
 }
 
 func (t *tokenizer) nextToken() (ast.Token, string) {
   if t.insertSemi {
     t.insertSemi = false
-    t.last = ast.T_SEMICOLON
-    return ast.T_SEMICOLON, ";"
+    t.last = ast.TokenSemicolon
+    return ast.TokenSemicolon, ";"
   }
   tok, literal := t.scan()
-  if tok == ast.T_NEWLINE && t.needSemi(t.last) {
+  if tok == ast.TokenNewline && t.needSemi(t.last) {
     t.insertSemi = true
   }
   t.last = tok

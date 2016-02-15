@@ -192,6 +192,9 @@ func (c *compiler) genRegister() int {
 }
 
 func (c *compiler) declareLocalVar(name string, reg int) {
+  if _, ok := c.block.names[name]; ok {
+    c.error(c.lastLine, fmt.Sprintf("cannot redeclare '%s'", name))
+  }
   c.block.addNameInfo(name, &nameinfo{false, nil, reg, kScopeLocal, c.block})
 }
 
@@ -213,10 +216,10 @@ func (c *compiler) leaveBlock() {
   if block.context == kBlockContextLoop {
     loop := block.loop
     for _, index := range loop.breaks {
-      c.modifyAsBx(int(index), OP_JMP, 0, int(loop.breakTarget - index - 1))
+      c.modifyAsBx(int(index), OpJmp, 0, int(loop.breakTarget - index - 1))
     }
     for _, index := range loop.continues {
-      c.modifyAsBx(int(index), OP_JMP, 0, int(loop.continueTarget - index - 1))
+      c.modifyAsBx(int(index), OpJmp, 0, int(loop.continueTarget - index - 1))
     }
   }
   c.block = block.parent
@@ -266,9 +269,9 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
       return info.value, true
     }
   case *ast.UnaryExpr:
-    if t.Op == ast.T_MINUS {
+    if t.Op == ast.TokenMinus {
       val, ok := c.constFold(t.Right)
-      if ok && val.Type() == VALUE_NUMBER {
+      if ok && val.Type() == ValueNumber {
         f64, _ := val.assertFloat64()
         return Number(-f64), true
       }
@@ -276,7 +279,7 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
     } else {
       // 'not' operator
       val, ok := c.constFold(t.Right)
-      if ok && val.Type() == VALUE_BOOL {
+      if ok && val.Type() == ValueBool {
         bool_, _ := val.assertBool()
         return Bool(!bool_), true
       }
@@ -298,25 +301,25 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
 
       // first check all arithmetic/relational operations
       switch t.Op {
-      case ast.T_PLUS:
+      case ast.TokenPlus:
         ret = Number(lf64 + rf64)
-      case ast.T_MINUS:
+      case ast.TokenMinus:
         ret = Number(lf64 - rf64)
-      case ast.T_TIMES:
+      case ast.TokenTimes:
         ret = Number(lf64 * rf64)
-      case ast.T_DIV:
+      case ast.TokenDiv:
         ret = Number(lf64 / rf64)
-      case ast.T_TIMESTIMES:
+      case ast.TokenTimestimes:
         ret = Number(math.Pow(lf64, rf64))
-      case ast.T_LT:
+      case ast.TokenLt:
         ret = Bool(lf64 < rf64)
-      case ast.T_LTEQ:
+      case ast.TokenLteq:
         ret = Bool(lf64 <= rf64)
-      case ast.T_GT:
+      case ast.TokenGt:
         ret = Bool(lf64 > rf64)
-      case ast.T_GTEQ:
+      case ast.TokenGteq:
         ret = Bool(lf64 >= rf64)
-      case ast.T_EQEQ:
+      case ast.TokenEqeq:
         ret = Bool(lf64 == rf64)
       }
       if ret != nil {
@@ -332,9 +335,9 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
       }
 
       switch t.Op {
-      case ast.T_AMPAMP:
+      case ast.TokenAmpamp:
         return Bool(lb && rb), true
-      case ast.T_PIPEPIPE:
+      case ast.TokenPipepipe:
         return Bool(lb || rb), true
       }
 
@@ -346,11 +349,11 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
       }
 
       switch t.Op {
-      case ast.T_PLUS:
+      case ast.TokenPlus:
         return String(ls + rs), true
-      case ast.T_EQEQ:
+      case ast.TokenEqeq:
         return Bool(ls == rs), true
-      case ast.T_BANGEQ:
+      case ast.TokenBangeq:
         return Bool(ls != rs), true
       }
     }
@@ -404,7 +407,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
   }
   if end >= start {
     // variables without initializer are set to nil
-    c.emitAB(OP_LOADNIL, start, end, names[0].NodeInfo.Line)
+    c.emitAB(OpLoadnil, start, end, names[0].NodeInfo.Line)
   }
 }
 
@@ -420,11 +423,11 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
     }
     switch scope {
     case kScopeLocal:
-      c.emitAB(OP_MOVE, info.reg, valueReg, v.NodeInfo.Line)
+      c.emitAB(OpMove, info.reg, valueReg, v.NodeInfo.Line)
     case kScopeRef, kScopeGlobal:
-      op := OP_SETGLOBAL
+      op := OpSetglobal
       if scope == kScopeRef {
-        op = OP_SETREF
+        op = OpSetref
       }
       c.emitABx(op, valueReg, c.addConst(String(v.Value)), v.NodeInfo.Line)
     }
@@ -436,14 +439,14 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
     subData := exprdata{true, assignReg, assignReg}
     v.Right.Accept(c, &subData)
     subReg := subData.regb
-    c.emitABC(OP_SET, arrReg, subReg, valueReg, v.NodeInfo.Line)
+    c.emitABC(OpSet, arrReg, subReg, valueReg, v.NodeInfo.Line)
   case *ast.Selector:
     objData := exprdata{true, assignReg, assignReg}
     v.Left.Accept(c, &objData)
     objReg := objData.regb
     key := OpConstOffset + c.addConst(String(v.Value))
 
-    c.emitABC(OP_SET, objReg, key, valueReg, v.NodeInfo.Line)
+    c.emitABC(OpSet, objReg, key, valueReg, v.NodeInfo.Line)
   }
 }
 
@@ -451,28 +454,28 @@ func (c *compiler) branchConditionHelper(cond, then, else_ ast.Node, reg int) {
   ternaryData := exprdata{true, reg + 1, reg + 1}
   cond.Accept(c, &ternaryData)
   condr := ternaryData.regb
-  jmpInstr := c.emitAsBx(OP_JMPFALSE, condr, 0, c.lastLine)
+  jmpInstr := c.emitAsBx(OpJmpfalse, condr, 0, c.lastLine)
   thenLabel := c.newLabel()
 
   ternaryData = exprdata{false, reg, reg}
   then.Accept(c, &ternaryData)
-  c.modifyAsBx(jmpInstr, OP_JMPFALSE, condr, c.labelOffset(thenLabel))
+  c.modifyAsBx(jmpInstr, OpJmpfalse, condr, c.labelOffset(thenLabel))
 
   if else_ != nil {
-    successInstr := c.emitAsBx(OP_JMP, 0, 0, c.lastLine)
+    successInstr := c.emitAsBx(OpJmp, 0, 0, c.lastLine)
     
     elseLabel := c.newLabel()
     ternaryData = exprdata{false, reg, reg}
     else_.Accept(c, &ternaryData)
 
-    c.modifyAsBx(successInstr, OP_JMP, 0, c.labelOffset(elseLabel))
+    c.modifyAsBx(successInstr, OpJmp, 0, c.labelOffset(elseLabel))
   }
 }
 
 func (c *compiler) functionReturnGuard() {
   last := c.block.proto.Code[c.block.proto.NumCode-1]
-  if OpGetOpcode(last) != OP_RETURN {
-    c.emitAB(OP_RETURN, 0, 0, c.lastLine)
+  if OpGetOpcode(last) != OpReturn {
+    c.emitAB(OpReturn, 0, 0, c.lastLine)
   }
 }
 
@@ -492,7 +495,7 @@ func (c *compiler) VisitNil(node *ast.Nil, data interface{}) {
     rega = c.genRegister()
     regb = rega
   }
-  c.emitAB(OP_LOADNIL, rega, regb, node.NodeInfo.Line)
+  c.emitAB(OpLoadnil, rega, regb, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
@@ -507,7 +510,7 @@ func (c *compiler) VisitBool(node *ast.Bool, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  c.emitABx(OpLoadconst, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
@@ -522,7 +525,7 @@ func (c *compiler) VisitNumber(node *ast.Number, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  c.emitABx(OpLoadconst, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitString(node *ast.String, data interface{}) {
@@ -537,7 +540,7 @@ func (c *compiler) VisitString(node *ast.String, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+  c.emitABx(OpLoadconst, reg, c.addConst(value), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitId(node *ast.Id, data interface{}) {
@@ -555,7 +558,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
       expr.regb = OpConstOffset + c.addConst(info.value)
       return
     }
-    c.emitABx(OP_LOADCONST, reg, c.addConst(info.value), node.NodeInfo.Line)
+    c.emitABx(OpLoadconst, reg, c.addConst(info.value), node.NodeInfo.Line)
   } else if ok {
     scope = info.scope
   } else {
@@ -568,11 +571,11 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
       expr.regb = info.reg
       return
     }
-    c.emitAB(OP_MOVE, reg, info.reg, node.NodeInfo.Line)
+    c.emitAB(OpMove, reg, info.reg, node.NodeInfo.Line)
   case kScopeRef, kScopeGlobal:
-    op := OP_LOADGLOBAL
+    op := OpLoadglobal
     if scope == kScopeRef {
-      op = OP_LOADREF
+      op = OpLoadref
     }
     c.emitABx(op, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
     if exprok && expr.propagate {
@@ -590,7 +593,7 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
     reg = c.genRegister()
   }
   length := len(node.Elements)
-  c.emitAB(OP_ARRAY, reg, 0, node.NodeInfo.Line)
+  c.emitAB(OpArray, reg, 0, node.NodeInfo.Line)
 
   times := length / kArrayMaxRegisters + 1
   for t := 0; t < times; t++ {
@@ -604,7 +607,7 @@ func (c *compiler) VisitArray(node *ast.Array, data interface{}) {
       exprdata := exprdata{false, reg + i + 1, reg + i + 1}
       el.Accept(c, &exprdata)
     }
-    c.emitAB(OP_APPEND, reg, end, node.NodeInfo.Line)
+    c.emitAB(OpAppend, reg, end, node.NodeInfo.Line)
   }
   if exprok && expr.propagate {
     expr.regb = reg
@@ -621,7 +624,7 @@ func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
   node.Value.Accept(c, &valueData)
   value := valueData.regb
 
-  c.emitABC(OP_SET, objreg, key, value, node.NodeInfo.Line)
+  c.emitABC(OpSet, objreg, key, value, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
@@ -632,7 +635,7 @@ func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
   } else {
     reg = c.genRegister()
   }
-  c.emitAB(OP_OBJECT, reg, 0, node.NodeInfo.Line)
+  c.emitAB(OpObject, reg, 0, node.NodeInfo.Line)
   for _, field := range node.Fields {
     fieldData := exprdata{false, reg, reg}
     field.Accept(c, &fieldData)
@@ -660,6 +663,9 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
   parent.Funcs = append(parent.Funcs, proto)
   parent.NumFuncs++
 
+  // insert 'this' into scope
+  c.declareLocalVar("this", c.genRegister())
+
   // insert arguments into scope
   for _, n := range node.Args {
     switch arg := n.(type) {
@@ -673,10 +679,15 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
   c.functionReturnGuard()
 
   c.block = c.block.parent
-  c.emitABx(OP_FUNC, reg, index, node.NodeInfo.Line)
+  c.emitABx(OpFunc, reg, index, node.NodeInfo.Line)
 
   if node.Name != nil {
-    c.assignmentHelper(node.Name, reg + 1, reg)
+    switch name := node.Name.(type) {
+    case *ast.Id:
+      c.declareLocalVar(name.Value, reg)
+    default:  
+      c.assignmentHelper(name, reg + 1, reg)
+    }
   }
   if exprok && expr.propagate {
     expr.regb = reg
@@ -696,7 +707,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
   objReg := objData.regb
 
   key := OpConstOffset + c.addConst(String(node.Value))
-  c.emitABC(OP_GET, reg, objReg, key, node.NodeInfo.Line)
+  c.emitABC(OpGet, reg, objReg, key, node.NodeInfo.Line)
   if exprok && expr.propagate {
     expr.regb = objReg
   }
@@ -723,7 +734,7 @@ func (c *compiler) VisitSubscript(node *ast.Subscript, data interface{}) {
   indexData := exprdata{true, reg + 1, reg + 1}
   node.Right.Accept(c, &indexData)
   indexReg := indexData.regb
-  c.emitABC(OP_GET, reg, arrReg, indexReg, node.NodeInfo.Line)
+  c.emitABC(OpGet, reg, arrReg, indexReg, node.NodeInfo.Line)
 
   if exprok && expr.propagate {
     expr.regb = reg
@@ -758,7 +769,7 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
   var op Opcode
   switch node.Left.(type) {
   case *ast.Selector:
-    op = OP_CALLMETHOD
+    op = OpCallmethod
     callerData := exprdata{true, startReg, startReg}
     node.Left.Accept(c, &callerData)
     objReg := callerData.regb
@@ -766,9 +777,9 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     // insert object as first argument
     endReg += 1
     argCount += 1
-    c.emitAB(OP_MOVE, endReg, objReg, node.NodeInfo.Line)
+    c.emitAB(OpMove, endReg, objReg, node.NodeInfo.Line)
   default:
-    op = OP_CALL
+    op = OpCall
     callerData := exprdata{false, startReg, startReg}
     node.Left.Accept(c, &callerData)
   }
@@ -792,10 +803,10 @@ func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
   }
   var op Opcode
   switch node.Op {
-  case ast.T_PLUSPLUS:
-    op = OP_ADD
-  case ast.T_MINUSMINUS:
-    op = OP_SUB
+  case ast.TokenPlusplus:
+    op = OpAdd
+  case ast.TokenMinusminus:
+    op = OpSub
   }
   leftdata := exprdata{true, reg, reg}
   node.Left.Accept(c, &leftdata)
@@ -804,7 +815,7 @@ func (c *compiler) VisitPostfixExpr(node *ast.PostfixExpr, data interface{}) {
 
   // don't bother moving if we're not in an expression
   if exprok {
-    c.emitAB(OP_MOVE, reg, left, node.NodeInfo.Line)
+    c.emitAB(OpMove, reg, left, node.NodeInfo.Line)
   }
   c.emitABC(op, left, left, one, node.NodeInfo.Line)
 }
@@ -823,11 +834,11 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
       expr.regb = OpConstOffset + c.addConst(value)
       return
     }
-    c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+    c.emitABx(OpLoadconst, reg, c.addConst(value), node.NodeInfo.Line)
   } else if ast.IsPostfixOp(node.Op) {
-    op := OP_ADD
-    if node.Op == ast.T_MINUSMINUS {
-      op = OP_SUB
+    op := OpAdd
+    if node.Op == ast.TokenMinusminus {
+      op = OpSub
     }
     exprdata := exprdata{true, reg, reg}
     node.Right.Accept(c, &exprdata)
@@ -836,17 +847,17 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
 
     // don't bother moving if we're not in an expression
     if exprok {
-      c.emitAB(OP_MOVE, reg, exprdata.regb, node.NodeInfo.Line)
+      c.emitAB(OpMove, reg, exprdata.regb, node.NodeInfo.Line)
     }
   } else {
     var op Opcode
     switch node.Op {
-    case ast.T_MINUS:
-      op = OP_NEG
-    case ast.T_NOT, ast.T_BANG:
-      op = OP_NOT
-    case ast.T_TILDE:
-      op = OP_CMPL
+    case ast.TokenMinus:
+      op = OpNeg
+    case ast.TokenNot, ast.TokenBang:
+      op = OpNot
+    case ast.TokenTilde:
+      op = OpCmpl
     }
     exprdata := exprdata{true, reg, reg}
     node.Right.Accept(c, &exprdata)
@@ -871,14 +882,14 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
       expr.regb = OpConstOffset + c.addConst(value)
       return
     }
-    c.emitABx(OP_LOADCONST, reg, c.addConst(value), node.NodeInfo.Line)
+    c.emitABx(OpLoadconst, reg, c.addConst(value), node.NodeInfo.Line)
   } else {
-    if isAnd, isOr := node.Op == ast.T_AMPAMP, node.Op == ast.T_PIPEPIPE; isAnd || isOr {
+    if isAnd, isOr := node.Op == ast.TokenAmpamp, node.Op == ast.TokenPipepipe; isAnd || isOr {
       var op Opcode
       if isAnd {
-        op = OP_JMPFALSE
+        op = OpJmpfalse
       } else {
-        op = OP_JMPTRUE
+        op = OpJmptrue
       }
       exprdata := exprdata{true, reg, reg}
       node.Left.Accept(c, &exprdata)
@@ -895,34 +906,34 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     
     var op Opcode
     switch node.Op {
-    case ast.T_PLUS:
-      op = OP_ADD
-    case ast.T_MINUS:
-      op = OP_SUB
-    case ast.T_TIMES:
-      op = OP_MUL
-    case ast.T_DIV:
-      op = OP_DIV
-    case ast.T_TIMESTIMES:
-      op = OP_POW
-    case ast.T_LTLT:
-      op = OP_SHL
-    case ast.T_GTGT:
-      op = OP_SHR
-    case ast.T_AMP:
-      op = OP_AND
-    case ast.T_PIPE:
-      op = OP_OR
-    case ast.T_TILDE:
-      op = OP_XOR
-    case ast.T_LT, ast.T_GTEQ:
-      op = OP_LT
-    case ast.T_LTEQ, ast.T_GT:
-      op = OP_LE
-    case ast.T_EQ:
-      op = OP_EQ
-    case ast.T_BANGEQ:
-      op = OP_NE
+    case ast.TokenPlus:
+      op = OpAdd
+    case ast.TokenMinus:
+      op = OpSub
+    case ast.TokenTimes:
+      op = OpMul
+    case ast.TokenDiv:
+      op = OpDiv
+    case ast.TokenTimestimes:
+      op = OpPow
+    case ast.TokenLtlt:
+      op = OpShl
+    case ast.TokenGtgt:
+      op = OpShr
+    case ast.TokenAmp:
+      op = OpAnd
+    case ast.TokenPipe:
+      op = OpOr
+    case ast.TokenTilde:
+      op = OpXor
+    case ast.TokenLt, ast.TokenGteq:
+      op = OpLt
+    case ast.TokenLteq, ast.TokenGt:
+      op = OpLe
+    case ast.TokenEq:
+      op = OpEq
+    case ast.TokenBangeq:
+      op = OpNe
     }
 
     exprdata := exprdata{true, reg, 0}
@@ -934,7 +945,7 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
     node.Right.Accept(c, &exprdata)
     right := exprdata.regb
 
-    if node.Op == ast.T_GT || node.Op == ast.T_GTEQ {
+    if node.Op == ast.TokenGt || node.Op == ast.TokenGteq {
       // invert operands
       c.emitABC(op, reg, right, left, node.NodeInfo.Line)  
     } else {
@@ -980,7 +991,7 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
 }
 
 func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
-  if node.Op == ast.T_COLONEQ {
+  if node.Op == ast.TokenColoneq {
     // short variable declaration
     var names []*ast.Id
     for _, id := range node.Left {
@@ -1028,11 +1039,11 @@ func (c *compiler) VisitBranchStmt(node *ast.BranchStmt, data interface{}) {
   if !c.insideLoop() {
     c.error(node.NodeInfo.Line, fmt.Sprintf("%s outside loop", node.Type))
   }
-  instr := c.emitAsBx(OP_JMP, 0, 0, node.NodeInfo.Line)
+  instr := c.emitAsBx(OpJmp, 0, 0, node.NodeInfo.Line)
   switch node.Type {
-  case ast.T_CONTINUE:
+  case ast.TokenContinue:
     c.block.loop.continues = append(c.block.loop.continues, uint32(instr))
-  case ast.T_BREAK:
+  case ast.TokenBreak:
     c.block.loop.breaks = append(c.block.loop.breaks, uint32(instr))
   }
 }
@@ -1044,7 +1055,7 @@ func (c *compiler) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) {
     data := exprdata{false, reg, reg}
     v.Accept(c, &data)
   }
-  c.emitAB(OP_RETURN, start, len(node.Values), node.NodeInfo.Line)
+  c.emitAB(OpReturn, start, len(node.Values), node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitIfStmt(node *ast.IfStmt, data interface{}) {
@@ -1072,8 +1083,8 @@ func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interfac
 
   collectionData := exprdata{false, colReg, colReg}
   node.Collection.Accept(c, &collectionData)
-  c.emitAB(OP_FORBEGIN, arrReg, colReg, node.NodeInfo.Line)
-  c.emitABx(OP_LOADCONST, idxReg, c.addConst(Number(0)), c.lastLine)
+  c.emitAB(OpForbegin, arrReg, colReg, node.NodeInfo.Line)
+  c.emitABx(OpLoadconst, idxReg, c.addConst(Number(0)), c.lastLine)
 
   if node.Value == nil {
     c.declareLocalVar(node.Key.Value, valReg)
@@ -1084,19 +1095,19 @@ func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interfac
 
   testLabel := c.newLabel()
   testReg := c.block.register
-  c.emitABC(OP_LT, testReg, idxReg, lenReg, c.lastLine)
-  jmpInstr := c.emitAsBx(OP_JMPFALSE, testReg, 0, c.lastLine)
+  c.emitABC(OpLt, testReg, idxReg, lenReg, c.lastLine)
+  jmpInstr := c.emitAsBx(OpJmpfalse, testReg, 0, c.lastLine)
 
-  c.emitABC(OP_FORITER, keyReg, colReg, arrReg, node.NodeInfo.Line)
-  c.emitABC(OP_GET, valReg, colReg, keyReg, c.lastLine)
+  c.emitABC(OpForiter, keyReg, colReg, arrReg, node.NodeInfo.Line)
+  c.emitABC(OpGet, valReg, colReg, keyReg, c.lastLine)
 
   node.Body.Accept(c, nil)
   c.block.loop.continueTarget = c.newLabel()
 
-  c.emitAsBx(OP_JMP, 0, -c.labelOffset(testLabel) - 1, c.lastLine)
+  c.emitAsBx(OpJmp, 0, -c.labelOffset(testLabel) - 1, c.lastLine)
   c.block.loop.breakTarget = c.newLabel()
 
-  c.modifyAsBx(jmpInstr, OP_JMPFALSE, testReg, c.labelOffset(uint32(jmpInstr) + 1))
+  c.modifyAsBx(jmpInstr, OpJmpfalse, testReg, c.labelOffset(uint32(jmpInstr) + 1))
 }
 
 func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
@@ -1118,7 +1129,7 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
     node.Cond.Accept(c, &condData)
 
     cond = condData.regb
-    jmpInstr = c.emitAsBx(OP_JMPFALSE, cond, 0, c.lastLine)
+    jmpInstr = c.emitAsBx(OpJmpfalse, cond, 0, c.lastLine)
     jmpLabel = c.newLabel()
   }
 
@@ -1132,10 +1143,10 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
     c.block.loop.continueTarget = startLabel // saves one jump
   }
 
-  c.emitAsBx(OP_JMP, 0, -c.labelOffset(startLabel) - 1, c.lastLine)
+  c.emitAsBx(OpJmp, 0, -c.labelOffset(startLabel) - 1, c.lastLine)
 
   if hasCond {
-    c.modifyAsBx(jmpInstr, OP_JMPFALSE, cond, c.labelOffset(jmpLabel))
+    c.modifyAsBx(jmpInstr, OpJmpfalse, cond, c.labelOffset(jmpLabel))
   }
   c.block.loop.breakTarget = c.newLabel()
 }

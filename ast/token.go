@@ -8,176 +8,176 @@ package ast
 type Token int
 
 const (
-  T_EOS Token = iota
-  T_NEWLINE
-  T_NIL
-  T_TRUE
-  T_FALSE
-  T_IF
-  T_ELSE
-  T_FOR
-  T_WHEN
-  T_FUNC
-  T_CONST
-  T_VAR
-  T_BREAK
-  T_CONTINUE
-  T_FALLTHROUGH
-  T_RETURN
-  T_NOT
-  T_IN
-  T_ID
-  T_STRING
-  T_INT
-  T_FLOAT
+  TokenEos Token = iota
+  TokenNewline
+  TokenNil
+  TokenTrue
+  TokenFalse
+  TokenIf
+  TokenElse
+  TokenFor
+  TokenWhen
+  TokenFunc
+  TokenConst
+  TokenVar
+  TokenBreak
+  TokenContinue
+  TokenFallthrough
+  TokenReturn
+  TokenNot
+  TokenIn
+  TokenId
+  TokenString
+  TokenInt
+  TokenFloat
 
   // assignment operators
   assignOpBegin
-  T_EQ
-  T_COLONEQ
-  T_PLUSEQ
-  T_MINUSEQ
-  T_TIMESEQ
-  T_DIVEQ
-  T_PIPEEQ
-  T_AMPEQ
-  T_TILDEEQ
+  TokenEq
+  TokenColoneq
+  TokenPluseq
+  TokenMinuseq
+  TokenTimeseq
+  TokenDiveq
+  TokenPipeeq
+  TokenAmpeq
+  TokenTildeeq
   assignOpEnd
 
   // operators in order of precedence from lower-to-higher
   binaryOpBegin
-  T_PIPEPIPE
+  TokenPipepipe
 
-  T_AMPAMP
+  TokenAmpamp
 
-  T_EQEQ
-  T_BANGEQ
+  TokenEqeq
+  TokenBangeq
 
-  T_LT
-  T_LTEQ
-  T_GT
-  T_GTEQ
+  TokenLt
+  TokenLteq
+  TokenGt
+  TokenGteq
 
-  T_PLUS
-  T_MINUS
-  T_PIPE
-  T_TILDE
+  TokenPlus
+  TokenMinus
+  TokenPipe
+  TokenTilde
 
-  T_TIMES
-  T_TIMESTIMES
-  T_DIV
-  T_LTLT
-  T_GTGT
-  T_AMP
-  T_MOD
+  TokenTimes
+  TokenTimestimes
+  TokenDiv
+  TokenLtlt
+  TokenGtgt
+  TokenAmp
+  TokenMod
   binaryOpEnd
 
-  T_PLUSPLUS
-  T_MINUSMINUS
-  T_EQGT
-  T_COLON
-  T_SEMICOLON
-  T_COMMA
-  T_DOT
-  T_DOTDOTDOT
-  T_BANG
-  T_QUESTION
-  T_LPAREN
-  T_RPAREN
-  T_LBRACK
-  T_RBRACK
-  T_LBRACE
-  T_RBRACE
-  T_ILLEGAL
+  TokenPlusplus
+  TokenMinusminus
+  TokenEqgt
+  TokenColon
+  TokenSemicolon
+  TokenComma
+  TokenDot
+  TokenDotdotdot
+  TokenBang
+  TokenQuestion
+  TokenLparen
+  TokenRparen
+  TokenLbrack
+  TokenRbrack
+  TokenLbrace
+  TokenRbrace
+  TokenIllegal
 )
 
 var (
   // map keywords to their respective types
   keywords = map[string]Token{
-    "nil": T_NIL,
-    "true": T_TRUE,
-    "false": T_FALSE,
-    "if": T_IF,
-    "else": T_ELSE,
-    "for": T_FOR,
-    "when": T_WHEN,
-    "func": T_FUNC,
-    "const": T_CONST,
-    "var": T_VAR,
-    "break": T_BREAK,
-    "continue": T_CONTINUE,
-    "fallthrough": T_FALLTHROUGH,
-    "return": T_RETURN,
-    "not": T_NOT,
-    "in": T_IN,
+    "nil": TokenNil,
+    "true": TokenTrue,
+    "false": TokenFalse,
+    "if": TokenIf,
+    "else": TokenElse,
+    "for": TokenFor,
+    "when": TokenWhen,
+    "func": TokenFunc,
+    "const": TokenConst,
+    "var": TokenVar,
+    "break": TokenBreak,
+    "continue": TokenContinue,
+    "fallthrough": TokenFallthrough,
+    "return": TokenReturn,
+    "not": TokenNot,
+    "in": TokenIn,
   }
 
   // descriptive representation of tokens
   strings = map[Token]string{
-    T_EOS: "end of source",
-    T_NIL: "nil",
-    T_TRUE: "true",
-    T_FALSE: "false",
-    T_IF: "if",
-    T_ELSE: "else",
-    T_FOR: "for",
-    T_FUNC: "func",
-    T_WHEN: "when",
-    T_CONST: "const",
-    T_VAR: "var",
-    T_BREAK: "break",
-    T_CONTINUE: "continue",
-    T_FALLTHROUGH: "fallthrough",
-    T_RETURN: "return",
-    T_NOT: "not",
-    T_IN: "in",
-    T_ID: "identifier",
-    T_STRING: "string",
-    T_INT: "int",
-    T_FLOAT: "float",
-    T_PLUS: "+",
-    T_MINUS: "-",
-    T_TIMES: "*",
-    T_DIV: "/",
-    T_AMPAMP: "&&",
-    T_PIPEPIPE: "||",
-    T_AMP: "&",
-    T_PIPE: "|",
-    T_TILDE: "^",
-    T_MOD: "%",
-    T_LT: "<",
-    T_LTEQ: "<=",
-    T_LTLT: "<<",
-    T_GT: ">",
-    T_GTEQ: ">=",
-    T_GTGT: ">>",
-    T_EQ: "=",
-    T_BANGEQ: "!=",
-    T_COLONEQ: ":=",
-    T_PLUSEQ: "+=",
-    T_MINUSEQ: "-=",
-    T_TIMESEQ: "*=",
-    T_DIVEQ: "/=",
-    T_AMPEQ: "&=",
-    T_PIPEEQ: "|=",
-    T_TILDEEQ: "^=",
-    T_EQEQ: "==",
-    T_PLUSPLUS: "++",
-    T_MINUSMINUS: "--",
-    T_EQGT: "=>",
-    T_COLON: ":",
-    T_SEMICOLON: ";",
-    T_COMMA: ",",
-    T_DOT: ".",
-    T_DOTDOTDOT: "...",
-    T_BANG: "!",
-    T_LPAREN: "(",
-    T_RPAREN: ")",
-    T_LBRACK: "[",
-    T_RBRACK: "]",
-    T_LBRACE: "{",
-    T_RBRACE: "}",
-    T_ILLEGAL: "illegal",
+    TokenEos: "end of source",
+    TokenNil: "nil",
+    TokenTrue: "true",
+    TokenFalse: "false",
+    TokenIf: "if",
+    TokenElse: "else",
+    TokenFor: "for",
+    TokenFunc: "func",
+    TokenWhen: "when",
+    TokenConst: "const",
+    TokenVar: "var",
+    TokenBreak: "break",
+    TokenContinue: "continue",
+    TokenFallthrough: "fallthrough",
+    TokenReturn: "return",
+    TokenNot: "not",
+    TokenIn: "in",
+    TokenId: "identifier",
+    TokenString: "string",
+    TokenInt: "int",
+    TokenFloat: "float",
+    TokenPlus: "+",
+    TokenMinus: "-",
+    TokenTimes: "*",
+    TokenDiv: "/",
+    TokenAmpamp: "&&",
+    TokenPipepipe: "||",
+    TokenAmp: "&",
+    TokenPipe: "|",
+    TokenTilde: "^",
+    TokenMod: "%",
+    TokenLt: "<",
+    TokenLteq: "<=",
+    TokenLtlt: "<<",
+    TokenGt: ">",
+    TokenGteq: ">=",
+    TokenGtgt: ">>",
+    TokenEq: "=",
+    TokenBangeq: "!=",
+    TokenColoneq: ":=",
+    TokenPluseq: "+=",
+    TokenMinuseq: "-=",
+    TokenTimeseq: "*=",
+    TokenDiveq: "/=",
+    TokenAmpeq: "&=",
+    TokenPipeeq: "|=",
+    TokenTildeeq: "^=",
+    TokenEqeq: "==",
+    TokenPlusplus: "++",
+    TokenMinusminus: "--",
+    TokenEqgt: "=>",
+    TokenColon: ":",
+    TokenSemicolon: ";",
+    TokenComma: ",",
+    TokenDot: ".",
+    TokenDotdotdot: "...",
+    TokenBang: "!",
+    TokenLparen: "(",
+    TokenRparen: ")",
+    TokenLbrack: "[",
+    TokenRbrack: "]",
+    TokenLbrace: "{",
+    TokenRbrace: "}",
+    TokenIllegal: "illegal",
   }
 
   // operators precedence
@@ -197,12 +197,12 @@ func Keyword(lit string) (Token, bool) {
 }
 
 func IsPostfixOp(tok Token) bool {
-  return (tok == T_PLUSPLUS || tok == T_MINUSMINUS)
+  return (tok == TokenPlusplus || tok == TokenMinusminus)
 }
 
 func IsUnaryOp(tok Token) bool {
   return IsPostfixOp(tok) || 
-    (tok == T_NOT || tok == T_BANG || tok == T_MINUS || tok == T_PLUS || tok == T_TILDE)
+    (tok == TokenNot || tok == TokenBang || tok == TokenMinus || tok == TokenPlus || tok == TokenTilde)
 }
 
 func IsBinaryOp(tok Token) bool {
@@ -218,7 +218,7 @@ func Precedence(tok Token) int {
 }
 
 func RightAssociative(tok Token) bool {
-  return tok == T_EQ
+  return tok == TokenEq
 }
 
 // method for Stringer interface

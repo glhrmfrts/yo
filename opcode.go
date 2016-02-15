@@ -20,52 +20,52 @@ type Opcode uint
 
 // NOTE: all register ranges are inclusive
 const (
-  OP_LOADNIL Opcode = iota  //  R(A) ... R(B) = nil
-  OP_LOADCONST              //  R(A) = K(Bx)
-  OP_LOADGLOBAL             //  R(A) = globals[K(Bx)]
-  OP_SETGLOBAL              //  globals[K(Bx)] = R(A)
-  OP_LOADREF                //  R(A) = refs[K(Bx)]
-  OP_SETREF                 //  refs[K(Bx)] = R(A)
+  OpLoadnil Opcode = iota  //  R(A) ... R(B) = nil
+  OpLoadconst              //  R(A) = K(Bx)
+  OpLoadglobal             //  R(A) = globals[K(Bx)]
+  OpSetglobal              //  globals[K(Bx)] = R(A)
+  OpLoadref                //  R(A) = refs[K(Bx)]
+  OpSetref                 //  refs[K(Bx)] = R(A)
 
-  OP_NEG                    //  R(A) = -RK(Bx)
-  OP_NOT                    //  R(A) = NOT RK(Bx)
-  OP_CMPL                   //  R(A) = ^RK(B)
+  OpNeg                    //  R(A) = -RK(Bx)
+  OpNot                    //  R(A) = NOT RK(Bx)
+  OpCmpl                   //  R(A) = ^RK(B)
 
-  OP_ADD                    //  R(A) = RK(B) + RK(C)
-  OP_SUB                    //  R(A) = RK(B) - RK(C)
-  OP_MUL                    //  R(A) = RK(B) * RK(C)
-  OP_DIV                    //  R(A) = RK(B) / RK(C)
-  OP_POW                    //  R(A) = pow(RK(B), RK(C))
-  OP_SHL                    //  R(A) = RK(B) << RK(C)
-  OP_SHR                    //  R(A) = RK(B) >> RK(C)
-  OP_AND                    //  R(A) = RK(B) & RK(C)
-  OP_OR                     //  R(A) = RK(B) | RK(C)
-  OP_XOR                    //  R(A) = RK(B) ^ RK(C)
-  OP_LT                     //  R(A) = RK(B) < RK(C)
-  OP_LE                     //  R(A) = RK(B) <= RK(C)
-  OP_EQ                     //  R(A) = RK(B) == RK(C)
-  OP_NE                     //  R(A) = RK(B) != RK(C)
+  OpAdd                    //  R(A) = RK(B) + RK(C)
+  OpSub                    //  R(A) = RK(B) - RK(C)
+  OpMul                    //  R(A) = RK(B) * RK(C)
+  OpDiv                    //  R(A) = RK(B) / RK(C)
+  OpPow                    //  R(A) = pow(RK(B), RK(C))
+  OpShl                    //  R(A) = RK(B) << RK(C)
+  OpShr                    //  R(A) = RK(B) >> RK(C)
+  OpAnd                    //  R(A) = RK(B) & RK(C)
+  OpOr                     //  R(A) = RK(B) | RK(C)
+  OpXor                    //  R(A) = RK(B) ^ RK(C)
+  OpLt                     //  R(A) = RK(B) < RK(C)
+  OpLe                     //  R(A) = RK(B) <= RK(C)
+  OpEq                     //  R(A) = RK(B) == RK(C)
+  OpNe                     //  R(A) = RK(B) != RK(C)
 
-  OP_MOVE                   //  R(A) = R(B)
-  OP_GET                    //  R(A) = R(B)[RK(C)]
-  OP_SET                    //  R(A)[RK(B)] = RK(C)
-  OP_APPEND                 //  R(A) = append(R(A), R(A+1) ... R(A+B))
+  OpMove                   //  R(A) = R(B)
+  OpGet                    //  R(A) = R(B)[RK(C)]
+  OpSet                    //  R(A)[RK(B)] = RK(C)
+  OpAppend                 //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
-  OP_CALL                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
-  OP_CALLMETHOD             //  same as OP_CALL, but first argument is the receiver
-  OP_ARRAY                  //  R(A) = []
-  OP_OBJECT                 //  R(A) = {}
-  OP_FUNC                   //  R(A) = func() { proto = funcs[Bx] }
+  OpCall                   //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
+  OpCallmethod             //  same as OpCall, but first argument is the receiver
+  OpArray                  //  R(A) = []
+  OpObject                 //  R(A) = {}
+  OpFunc                   //  R(A) = func() { proto = funcs[Bx] }
 
-  OP_JMP                    //  pc = pc + sBx
-  OP_JMPTRUE                //  pc = pc + sBx if RK(A) is not false or nil
-  OP_JMPFALSE               //  pc = pc + sBx if RK(A) is false or nil
-  OP_RETURN                 //  return R(A) ... R(A+B-1)
-  OP_FORBEGIN               //  R(A), R(A+1) = objkeys(R(B)), len(objkeys(R(B))) if R(B) is an object
+  OpJmp                    //  pc = pc + sBx
+  OpJmptrue                //  pc = pc + sBx if RK(A) is not false or nil
+  OpJmpfalse               //  pc = pc + sBx if RK(A) is false or nil
+  OpReturn                 //  return R(A) ... R(A+B-1)
+  OpForbegin               //  R(A), R(A+1) = objkeys(R(B)), len(objkeys(R(B))) if R(B) is an object
                             //  R(A), R(A+1) = R(B), len(R(B)) if R(B) is an array
                             //  error if not array
 
-  OP_FORITER                //  R(A) = R(A+1)++ if R(B) is an array
+  OpForiter                //  R(A) = R(A+1)++ if R(B) is an array
                             //  R(A) = R(C)[R(A+1)++] if R(B) is an object (R(C) should be an array of keys of the object)
 )
 
@@ -90,49 +90,49 @@ const OpConstOffset = 250
 
 var (
   opStrings = map[Opcode]string{
-    OP_LOADNIL: "LOADNIL",
-    OP_LOADCONST: "LOADCONST",
-    OP_LOADGLOBAL: "LOADGLOBAL",
-    OP_SETGLOBAL: "SETGLOBAL",
-    OP_LOADREF: "LOADREF",
-    OP_SETREF: "SETREF",
+    OpLoadnil: "loadnil",
+    OpLoadconst: "loadconst",
+    OpLoadglobal: "loadglobal",
+    OpSetglobal: "setglobal",
+    OpLoadref: "loadref",
+    OpSetref: "setref",
 
-    OP_NEG: "NEG",
-    OP_NOT: "NOT",
-    OP_CMPL: "CMPL",
+    OpNeg: "neg",
+    OpNot: "not",
+    OpCmpl: "cmpl",
 
-    OP_ADD: "ADD",
-    OP_SUB: "SUB",
-    OP_MUL: "MUL",
-    OP_DIV: "DIV",
-    OP_POW: "POW",                 
-    OP_SHL: "SHL",         
-    OP_SHR: "SHR",        
-    OP_AND: "AND",      
-    OP_OR: "OR",      
-    OP_XOR: "XOR",         
-    OP_LT: "LT",         
-    OP_LE: "LE",           
-    OP_EQ: "EQ",           
-    OP_NE: "NE",          
+    OpAdd: "add",
+    OpSub: "sub",
+    OpMul: "mul",
+    OpDiv: "div",
+    OpPow: "pow",                 
+    OpShl: "shl",         
+    OpShr: "shr",        
+    OpAnd: "and",      
+    OpOr: "or",      
+    OpXor: "xor",         
+    OpLt: "lt",         
+    OpLe: "le",           
+    OpEq: "eq",           
+    OpNe: "ne",          
 
-    OP_MOVE: "MOVE",
-    OP_GET: "GET",
-    OP_SET: "SET",
-    OP_APPEND: "APPEND",
+    OpMove: "move",
+    OpGet: "get",
+    OpSet: "set",
+    OpAppend: "append",
 
-    OP_CALL: "CALL",
-    OP_CALLMETHOD: "CALLMETHOD",
-    OP_ARRAY: "ARRAY",
-    OP_OBJECT: "OBJECT",
-    OP_FUNC: "FUNC",
+    OpCall: "call",
+    OpCallmethod: "callmethod",
+    OpArray: "array",
+    OpObject: "object",
+    OpFunc: "func",
 
-    OP_JMP: "JMP",
-    OP_JMPTRUE: "JMPTRUE",
-    OP_JMPFALSE: "JMPFALSE",
-    OP_RETURN: "RETURN",
-    OP_FORBEGIN: "FORBEGIN",
-    OP_FORITER: "FORITER",
+    OpJmp: "jmp",
+    OpJmptrue: "jmptrue",
+    OpJmpfalse: "jmpfalse",
+    OpReturn: "return",
+    OpForbegin: "forbegin",
+    OpForiter: "foriter",
   }
 )
 
