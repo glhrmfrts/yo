@@ -74,7 +74,7 @@ const (
 
   TokenPlusplus
   TokenMinusminus
-  TokenEqgt
+  TokenMinusgt
   TokenColon
   TokenSemicolon
   TokenComma
@@ -164,7 +164,7 @@ var (
     TokenEqeq: "==",
     TokenPlusplus: "++",
     TokenMinusminus: "--",
-    TokenEqgt: "=>",
+    TokenMinusgt: "->",
     TokenColon: ":",
     TokenSemicolon: ";",
     TokenComma: ",",

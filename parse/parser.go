@@ -283,8 +283,8 @@ func (p *parser) functionBody() ast.Node {
       Nodes: []ast.Node{ &ast.ReturnStmt{Values: []ast.Node{fn}, NodeInfo: ast.NodeInfo{line}} },
       NodeInfo: ast.NodeInfo{line},
     }
-  } else if p.accept(ast.TokenEqgt) {
-    // '=>' short function
+  } else if p.accept(ast.TokenMinusgt) {
+    // '->' short function
     list := p.exprList(false)
     
     return &ast.Block{

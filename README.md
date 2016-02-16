@@ -31,7 +31,7 @@ func factorial(n) {
 Note the addition of the ternary operator.
 Also, this function could be one-lined with the short function syntax:
 ```go
-func factorial(n) => n <= 1 ? n : n * factorial(n - 1)
+func factorial(n) -> n <= 1 ? n : n * factorial(n - 1)
 ```
 
 The `tests` folder contains some more examples, but they might be completely non-sense and change frequently since they're just tests. When the syntax is completely defined I'll create an `examples` folder with working code.

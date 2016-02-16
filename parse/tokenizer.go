@@ -344,6 +344,24 @@ func (t *tokenizer) maybe2(a ast.Token, c1 rune, t1 ast.Token, c2 rune, t2 ast.T
   return a
 }
 
+func (t *tokenizer) maybe3(a ast.Token, c1 rune, t1 ast.Token, c2 rune, t2 ast.Token, c3 rune, t3 ast.Token) ast.Token {
+  offset := t.readOffset
+
+  t.nextChar()
+  if t.r == c1 {
+    return t1
+  }
+  if t.r == c2 {
+    return t2
+  }
+  if t.r == c3 {
+    return t3
+  }
+
+  t.readOffset = offset
+  return a
+}
+
 // does the actual scanning and return the type of the token
 // and a literal string representing it
 func (t *tokenizer) scan() (ast.Token, string) {
@@ -382,7 +400,7 @@ func (t *tokenizer) scan() (ast.Token, string) {
     switch t.r {
     case '\n': tok = ast.TokenNewline
     case '+': tok = t.maybe2(ast.TokenPlus, '=', ast.TokenPluseq, '+', ast.TokenPlusplus)
-    case '-': tok = t.maybe2(ast.TokenMinus, '=', ast.TokenMinuseq, '-', ast.TokenMinusminus)
+    case '-': tok = t.maybe3(ast.TokenMinus, '=', ast.TokenMinuseq, '-', ast.TokenMinusminus, '>', ast.TokenMinusgt)
     case '*': tok = t.maybe2(ast.TokenTimes, '=', ast.TokenTimeseq, '*', ast.TokenTimestimes)
     case '%': tok = ast.TokenMod
     case '&': tok = t.maybe2(ast.TokenAmp, '=', ast.TokenAmpeq, '&', ast.TokenAmpamp)
@@ -390,7 +408,7 @@ func (t *tokenizer) scan() (ast.Token, string) {
     case '^': tok = t.maybe1(ast.TokenTilde, '=', ast.TokenTildeeq)
     case '<': tok = t.maybe2(ast.TokenLt, '=', ast.TokenLteq, '<', ast.TokenLtlt)
     case '>': tok = t.maybe2(ast.TokenGt, '=', ast.TokenGteq, '>', ast.TokenGtgt)
-    case '=': tok = t.maybe2(ast.TokenEq, '=', ast.TokenEqeq, '>', ast.TokenEqgt)
+    case '=': tok = t.maybe1(ast.TokenEq, '=', ast.TokenEqeq)
     case ':': tok = t.maybe1(ast.TokenColon, '=', ast.TokenColoneq)
     case ';': tok = ast.TokenSemicolon
     case ',': tok = ast.TokenComma
