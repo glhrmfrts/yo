@@ -26,17 +26,17 @@ type (
   scope int
 
   // lexical context of a block, (function, loop, branch...)
-  blockcontext int
+  blockContext int
 
-  nameinfo struct {
+  nameInfo struct {
     isConst bool
     value   Value // only set if isConst == true
     reg     int
     scope   scope
-    block   *compilerblock
+    block   *compilerBlock
   }
 
-  loopinfo struct {
+  loopInfo struct {
     breaks         []uint32
     continues      []uint32
     breakTarget    uint32
@@ -44,20 +44,20 @@ type (
   }
 
   // lexical block structure for compiler
-  compilerblock struct {
-    context  blockcontext
+  compilerBlock struct {
+    context  blockContext
     register int
-    names    map[string]*nameinfo
-    loop     *loopinfo
+    names    map[string]*nameInfo
+    loop     *loopInfo
     proto    *FuncProto
-    parent   *compilerblock
+    parent   *compilerBlock
   }
 
   compiler struct {
     lastLine int
     filename string
     mainFunc *FuncProto
-    block    *compilerblock
+    block    *compilerBlock
   }
 )
 
@@ -70,7 +70,7 @@ const (
 
 // blocks context
 const (
-  kBlockContextFunc blockcontext = iota
+  kBlockContextFunc blockContext = iota
   kBlockContextLoop
   kBlockContextBranch
 )
@@ -85,19 +85,19 @@ func (err *CompileError) Error() string {
 }
 
 //
-// compilerblock
+// compilerBlock
 //
 
-func newCompilerBlock(proto *FuncProto, context blockcontext, parent *compilerblock) *compilerblock {
-  return &compilerblock{
+func newCompilerBlock(proto *FuncProto, context blockContext, parent *compilerBlock) *compilerBlock {
+  return &compilerBlock{
     proto: proto,
     context: context,
     parent: parent,
-    names: make(map[string]*nameinfo, 128),
+    names: make(map[string]*nameInfo, 128),
   }
 }
 
-func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
+func (b *compilerBlock) nameInfo(name string) (*nameInfo, bool) {
   var closures int
   block := b
   for block != nil {
@@ -117,7 +117,7 @@ func (b *compilerblock) nameInfo(name string) (*nameinfo, bool) {
   return nil, false
 }
 
-func (b *compilerblock) addNameInfo(name string, info *nameinfo) {
+func (b *compilerBlock) addNameInfo(name string, info *nameInfo) {
   info.block = b
   b.names[name] = info
 }
@@ -195,16 +195,16 @@ func (c *compiler) declareLocalVar(name string, reg int) {
   if _, ok := c.block.names[name]; ok {
     c.error(c.lastLine, fmt.Sprintf("cannot redeclare '%s'", name))
   }
-  c.block.addNameInfo(name, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+  c.block.addNameInfo(name, &nameInfo{false, nil, reg, kScopeLocal, c.block})
 }
 
-func (c *compiler) enterBlock(context blockcontext) {
+func (c *compiler) enterBlock(context blockContext) {
   assert(c.block != nil, "c.block enterBlock")
   block := newCompilerBlock(c.block.proto, context, c.block)
   block.register = c.block.register
 
   if context == kBlockContextLoop {
-    block.loop = &loopinfo{}
+    block.loop = &loopInfo{}
   } else if c.block.loop != nil {
     block.loop = c.block.loop
   }
@@ -381,7 +381,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
       c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
     }
     reg := c.genRegister()
-    c.block.addNameInfo(id.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+    c.block.addNameInfo(id.Value, &nameInfo{false, nil, reg, kScopeLocal, c.block})
 
     exprdata := exprdata{false, reg, reg}
     if i == valueCount - 1 && (isCall || isUnpack) {
@@ -396,7 +396,7 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
           c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
         }
         end = c.genRegister()
-        c.block.addNameInfo(id.Value, &nameinfo{false, nil, end, kScopeLocal, c.block})
+        c.block.addNameInfo(id.Value, &nameInfo{false, nil, end, kScopeLocal, c.block})
         rem++
       }
       exprdata.regb, start = end, end + 1
@@ -674,7 +674,7 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
     switch arg := n.(type) {
     case *ast.Id:
       reg := c.genRegister()
-      c.block.addNameInfo(arg.Value, &nameinfo{false, nil, reg, kScopeLocal, c.block})
+      c.block.addNameInfo(arg.Value, &nameInfo{false, nil, reg, kScopeLocal, c.block})
     }
   }
 
@@ -986,7 +986,7 @@ func (c *compiler) VisitDeclaration(node *ast.Declaration, data interface{}) {
       if !ok {
         c.error(node.NodeInfo.Line, fmt.Sprintf("const '%s' initializer is not a constant", id.Value))
       }
-      c.block.addNameInfo(id.Value, &nameinfo{true, value, 0, kScopeLocal, c.block})
+      c.block.addNameInfo(id.Value, &nameInfo{true, value, 0, kScopeLocal, c.block})
     }
     return
   }
