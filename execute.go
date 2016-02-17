@@ -148,15 +148,15 @@ func numberArith(op Opcode, a, b float64) float64 {
   case OpPow:
     return math.Pow(a, b)
   case OpShl:
-    return float64(int(a) << int(b))
+    return float64(uint(a) << uint(b))
   case OpShr:
-    return float64(int(a) >> int(b))
+    return float64(uint(a) >> uint(b))
   case OpAnd:
-    return float64(int(a) & int(b))
+    return float64(uint(a) & uint(b))
   case OpOr:
-    return float64(int(a) | int(b))
+    return float64(uint(a) | uint(b))
   case OpXor:
-    return float64(int(a) ^ int(b))
+    return float64(uint(a) ^ uint(b))
   default:
     return 0
   }
@@ -175,7 +175,7 @@ func opCmp(state *State, cf *callFrame, instr uint32) int {
   } else {
     vc = cf.r[c]
   }
-  if vb.Type() != vc.Type() {
+  if (vb.Type() != ValueNil && vc.Type() != ValueNil) && vb.Type() != vc.Type() {
     // throw error
     return 1
   }
@@ -205,8 +205,32 @@ func opCmp(state *State, cf *callFrame, instr uint32) int {
       return 0
     }
   case ValueString:
-    res = stringCmp()
+    sb, sc := vb.String(), vc.String()
+    switch op {
+    case OpLt:
+      res = sb < sc
+    case OpLe:
+      res = sb <= sc
+    case OpEq:
+      res = sb == sc
+    case OpNe:
+      res = sb != sc
+    }
+  case ValueNumber:
+    numb, _ := vb.assertFloat64()
+    numc, _ := vb.assertFloat64()
+    switch op {
+    case OpLt:
+      res = numb < numc
+    case OpLe:
+      res = numb <= numc
+    case OpEq:
+      res = numb == numc
+    case OpNe:
+      res = numb != numc
+    }
   }
+  cf.r[a] = Bool(res)
   return 0
 }
 
