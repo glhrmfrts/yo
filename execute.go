@@ -55,33 +55,15 @@ func init() {
     opArith, // OpMul
     opArith, // OpDiv
     opArith, // OpPow
-    func(state *State, cf *callFrame, instr uint32) int { // OpShl
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpShr
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpAnd
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpOr
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpXor
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpLt
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpLe
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpEq
-      return 0
-    },
-    func(state *State, cf *callFrame, instr uint32) int { // OpNe
-      return 0
-    },
+    opArith, // OpShl
+    opArith, // OpShr
+    opArith, // OpAnd
+    opArith, // OpOr
+    opArith, // OpXor
+    opCmp,   // OpLt
+    opCmp,   // OpLe
+    opCmp,   // OpEq
+    opCmp,   // opNe
     func(state *State, cf *callFrame, instr uint32) int { // OpMove
       a, b := OpGetA(instr), OpGetB(instr)
       cf.r[a] = cf.r[b]
@@ -165,9 +147,67 @@ func numberArith(op Opcode, a, b float64) float64 {
     return a / b
   case OpPow:
     return math.Pow(a, b)
+  case OpShl:
+    return float64(int(a) << int(b))
+  case OpShr:
+    return float64(int(a) >> int(b))
+  case OpAnd:
+    return float64(int(a) & int(b))
+  case OpOr:
+    return float64(int(a) | int(b))
+  case OpXor:
+    return float64(int(a) ^ int(b))
   default:
     return 0
   }
+}
+
+func opCmp(state *State, cf *callFrame, instr uint32) int {
+  var vb, vc Value
+  a, b, c := OpGetA(instr), OpGetB(instr), OpGetC(instr)
+  if b > OpConstOffset {
+    vb = cf.fn.Proto.Consts[b-OpConstOffset]
+  } else {
+    vb = cf.r[b]
+  }
+  if c > OpConstOffset {
+    vc = cf.fn.Proto.Consts[c-OpConstOffset]
+  } else {
+    vc = cf.r[c]
+  }
+  if vb.Type() != vc.Type() {
+    // throw error
+    return 1
+  }
+  op := OpGetOpcode(instr)
+  var res bool
+  switch vb.Type() {
+  case ValueNil:
+    if op == OpEq || op == OpNe {
+      res = vc.Type() == ValueNil
+      if op == OpNe {
+        res = !res
+      }
+    } else {
+      // throw error
+      return 1
+    }
+  case ValueBool:
+    bb, _ := vb.assertBool()
+    bc, _ := vc.assertBool()
+    if eq, ne := op == OpEq, op == OpNe; eq || ne {
+      res = bb == bc
+      if ne {
+        res = !res
+      }
+    } else {
+      // throw error
+      return 0
+    }
+  case ValueString:
+    res = stringCmp()
+  }
+  return 0
 }
 
 func execute(state *State) {
