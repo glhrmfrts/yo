@@ -54,12 +54,12 @@ const (
 
 // Nil
 
-func (v Nil) Type() ValueType                { return ValueNil }
 func (v Nil) assertFloat64() (float64, bool) { return 0, false }
 func (v Nil) assertBool() (bool, bool)       { return false, false }
 func (v Nil) assertString() (string, bool)   { return "", false }
 
-func (v Nil) ToBool() bool { return false }
+func (v Nil) Type() ValueType { return ValueNil }
+func (v Nil) ToBool() bool    { return false }
 func (v Nil) String() string {
 	return "nil"
 }
@@ -81,25 +81,24 @@ func (v Bool) String() string {
 
 // Number
 
-func (v Number) Type() ValueType                { return ValueNumber }
 func (v Number) assertFloat64() (float64, bool) { return float64(v), true }
 func (v Number) assertBool() (bool, bool)       { return false, false }
 func (v Number) assertString() (string, bool)   { return "", false }
 
+func (v Number) Type() ValueType { return ValueNumber }
+func (v Number) ToBool() bool    { return true }
 func (v Number) String() string {
 	return fmt.Sprint(float64(v))
 }
 
-func (v Number) ToBool() bool { return true }
-
 // String
 
-func (v String) Type() ValueType                { return ValueString }
 func (v String) assertFloat64() (float64, bool) { return 0, false }
 func (v String) assertBool() (bool, bool)       { return false, false }
 func (v String) assertString() (string, bool)   { return string(v), true }
 
-func (v String) ToBool() bool { return true }
+func (v String) Type() ValueType { return ValueString }
+func (v String) ToBool() bool    { return true }
 func (v String) String() string {
 	return string(v)
 }
