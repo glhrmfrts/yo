@@ -6,8 +6,8 @@ package parse
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
-  "io/ioutil"
 )
 
 func TestExpr(t *testing.T) {

@@ -3,18 +3,18 @@
 package went
 
 import (
-  "fmt"
-  "os"
-  "math"
-  "strings"
-  "strconv"
+	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"strings"
 )
 
 func assert(cond bool, msg string) {
-  if !cond {
-    fmt.Printf("assertion failed: %s\n", msg)
-    os.Exit(1)
-  }
+	if !cond {
+		fmt.Printf("assertion failed: %s\n", msg)
+		os.Exit(1)
+	}
 }
 
 func isInt(n float64) bool {

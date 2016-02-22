@@ -3,37 +3,37 @@
 package main
 
 import (
-  "fmt"
-  "os"
-  "io/ioutil"
+	"fmt"
+	"github.com/glhrmfrts/went"
 	"github.com/glhrmfrts/went/parse"
-  "github.com/glhrmfrts/went/pretty"
-  "github.com/glhrmfrts/went"
+	"github.com/glhrmfrts/went/pretty"
+	"io/ioutil"
+	"os"
 )
 
 func main() {
-  filename := os.Args[1]
-  source, err := ioutil.ReadFile(filename)
-  if err != nil {
-    panic(err)
-  }
+	filename := os.Args[1]
+	source, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 
 	root, err := parse.ParseFile(source, filename)
-  if err != nil {
-    fmt.Println(err.Error())
-    return
-  }
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-  fmt.Println(pretty.SyntaxTree(root, 2))
+	fmt.Println(pretty.SyntaxTree(root, 2))
 
-  code, err := went.Compile(root, filename)
-  if err != nil {
-    fmt.Println(err.Error())
-    return
-  }
+	code, err := went.Compile(root, filename)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-  fmt.Println(pretty.Disasm(code))
+	fmt.Println(pretty.Disasm(code))
 
-  state := went.NewState()
-  state.RunProto(code)
+	state := went.NewState()
+	state.RunProto(code)
 }
