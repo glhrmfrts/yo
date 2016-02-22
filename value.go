@@ -18,7 +18,7 @@ type (
 
     Type() ValueType
     String() string
-    IsTrue() bool
+    ToBool() bool
   }
 
   Nil struct{}
@@ -59,7 +59,7 @@ func (v Nil) assertFloat64() (float64, bool) { return 0, false }
 func (v Nil) assertBool() (bool, bool)       { return false, false }
 func (v Nil) assertString() (string, bool)   { return "", false }
 
-func (v Nil) IsTrue() bool { return false }
+func (v Nil) ToBool() bool { return false }
 func (v Nil) String() string {
   return "nil"
 }
@@ -72,7 +72,7 @@ func (v Bool) assertBool() (bool, bool)       { return bool(v), true }
 func (v Bool) assertString() (string, bool)   { return "", false }
 
 func (v Bool) Type() ValueType { return ValueBool }
-func (v Bool) IsTrue() bool    { return bool(v) }
+func (v Bool) ToBool() bool    { return bool(v) }
 func (v Bool) String() string {
   if bool(v) {
     return "true"
@@ -91,7 +91,7 @@ func (v Number) String() string {
   return fmt.Sprint(float64(v))
 }
 
-func (v Number) IsTrue() bool { return true }
+func (v Number) ToBool() bool { return true }
 
 // String
 
@@ -100,7 +100,7 @@ func (v String) assertFloat64() (float64, bool) { return 0, false }
 func (v String) assertBool() (bool, bool)       { return false, false }
 func (v String) assertString() (string, bool)   { return string(v), true }
 
-func (v String) IsTrue() bool { return true }
+func (v String) ToBool() bool { return true }
 func (v String) String() string {
   return string(v)
 }

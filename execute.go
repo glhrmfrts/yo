@@ -13,7 +13,6 @@ type opHandler func(*State, *callFrame, uint32) int
 
 var opTable [kOpCount]opHandler
 
-
 func init() {
   opTable = [kOpCount]opHandler{
     func(state *State, cf *callFrame, instr uint32) int { // OpLoadNil
@@ -81,7 +80,7 @@ func init() {
       } else {
         bv = cf.r[bx]
       }
-      cf.r[a] = Bool(!bv.IsTrue())
+      cf.r[a] = Bool(!bv.ToBool())
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpCmpl

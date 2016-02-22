@@ -16,3 +16,5 @@ mary == john //=> compiled: false
 
 const world = "World"
 "Hello, " + world
+
+string(5)

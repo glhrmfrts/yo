@@ -75,7 +75,7 @@ const (
   kBlockContextBranch
 )
 
-// How much registers an array can append at one time
+// How much registers an array can use at one time
 // when it's created in literal form (see VisitArray)
 const kArrayMaxRegisters = 10
 
@@ -84,9 +84,7 @@ func (err *CompileError) Error() string {
   return fmt.Sprintf("%s:%d: %s", err.File, err.Line, err.Message)
 }
 
-//
 // compilerBlock
-//
 
 func newCompilerBlock(proto *FuncProto, context blockContext, parent *compilerBlock) *compilerBlock {
   return &compilerBlock{
@@ -122,10 +120,7 @@ func (b *compilerBlock) addNameInfo(name string, info *nameInfo) {
   b.names[name] = info
 }
 
-
-//
-// helper functions
-//
+// compiler
 
 func (c *compiler) error(line int, msg string) {
   panic(&CompileError{Line: line, File: c.filename, Message: msg})
@@ -271,6 +266,30 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
     if ok && info.isConst {
       return info.value, true
     }
+  case *ast.CallExpr:
+    id, ok := t.Left.(*ast.Id)
+    if ok && len(t.Args) == 1 {
+      rv, ok := c.constFold(t.Args[0])
+      if !ok {
+        return nil, false
+      }
+      if id.Value == "string" {
+        return String(rv.String()), true
+      } else if id.Value == "number" {
+        switch rv.Type() {
+        case ValueNumber:
+          return rv, true
+        case ValueString:
+          n, err := parseNumber(rv.String())
+          if err != nil {
+            return nil, false
+          }
+          return Number(n), true
+        }
+      } else if id.Value == "bool" {
+        return Bool(rv.ToBool()), true
+      }
+    }
   case *ast.UnaryExpr:
     if t.Op == ast.TokenMinus {
       val, ok := c.constFold(t.Right)
@@ -354,6 +373,14 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
       switch t.Op {
       case ast.TokenPlus:
         return String(ls + rs), true
+      case ast.TokenLt:
+        ret = Bool(ls < rs)
+      case ast.TokenLteq:
+        ret = Bool(ls <= rs)
+      case ast.TokenGt:
+        ret = Bool(ls > rs)
+      case ast.TokenGteq:
+        ret = Bool(ls >= rs)
       case ast.TokenEqeq:
         return Bool(ls == rs), true
       case ast.TokenBangeq:
@@ -766,6 +793,13 @@ func (c *compiler) VisitCallExpr(node *ast.CallExpr, data interface{}) {
     startReg = c.genRegister()
     endReg = startReg
     resultCount = 1
+  }
+
+  // check if it's a type conversion (string, number, bool)
+  v, ok := c.constFold(node)
+  if ok {
+    c.emitABx(OpLoadconst, startReg, c.addConst(v), node.NodeInfo.Line)
+    return
   }
 
   argCount := len(node.Args)
