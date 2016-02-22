@@ -3,10 +3,10 @@ SRC += $(wildcard parse/*.go)
 SRC += $(wildcard pretty/*.go)
 SRC += $(wildcard run/*.go)
 SRC += $(wildcard *.go)
-OUT = elo
+OUT = went
 
 ifdef SystemRoot
-	OUT = elo.exe
+	OUT = went.exe
 endif
 
 $(OUT): $(SRC)

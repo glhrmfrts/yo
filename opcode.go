@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package elo
+package went
 
 // vm instruction details and implementation.
 //
@@ -27,7 +27,7 @@ const (
   OpLoadref                //  R(A) = refs[K(Bx)]
   OpSetref                 //  refs[K(Bx)] = R(A)
 
-  OpNeg                    //  R(A) = -RK(Bx)
+  OpUnm                    //  R(A) = -RK(Bx)
   OpNot                    //  R(A) = NOT RK(Bx)
   OpCmpl                   //  R(A) = ^RK(B)
 
@@ -98,7 +98,7 @@ var (
     OpLoadref: "loadref",
     OpSetref: "setref",
 
-    OpNeg: "neg",
+    OpUnm: "neg",
     OpNot: "not",
     OpCmpl: "cmpl",
 

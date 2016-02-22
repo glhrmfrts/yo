@@ -6,9 +6,9 @@ import (
   "fmt"
   "os"
   "io/ioutil"
-	"github.com/glhrmfrts/elo/parse"
-  "github.com/glhrmfrts/elo/pretty"
-  "github.com/glhrmfrts/elo"
+	"github.com/glhrmfrts/went/parse"
+  "github.com/glhrmfrts/went/pretty"
+  "github.com/glhrmfrts/went"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 
   fmt.Println(pretty.SyntaxTree(root, 2))
 
-  code, err := elo.Compile(root, filename)
+  code, err := went.Compile(root, filename)
   if err != nil {
     fmt.Println(err.Error())
     return
@@ -34,6 +34,6 @@ func main() {
 
   fmt.Println(pretty.Disasm(code))
 
-  state := elo.NewState()
+  state := went.NewState()
   state.RunProto(code)
 }

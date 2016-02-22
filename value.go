@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package elo
+package went
 
 import (
   "fmt"
@@ -8,22 +8,17 @@ import (
 
 type ValueType int
 
-const (
-  ValueNil ValueType = iota
-  ValueBool
-  ValueNumber
-  ValueString
-)
-
 type (
   Value interface {
     // manual type retrieval seems to be faster than
     // go's interface type assertion (runtime.I2T2)
-    Type() ValueType
-    String() string
     assertFloat64() (float64, bool)
     assertBool() (bool, bool)
     assertString() (string, bool)
+
+    Type() ValueType
+    String() string
+    IsTrue() bool
   }
 
   Nil struct{}
@@ -33,6 +28,8 @@ type (
   Number float64
 
   String string
+
+  GoFunc func(*State) int
 
   Func struct {
     Proto *FuncProto
@@ -48,26 +45,42 @@ type (
   Channel chan Value
 )
 
+const (
+  ValueNil ValueType = iota
+  ValueBool
+  ValueNumber
+  ValueString
+)
+
+// Nil
+
 func (v Nil) Type() ValueType                { return ValueNil }
 func (v Nil) assertFloat64() (float64, bool) { return 0, false }
 func (v Nil) assertBool() (bool, bool)       { return false, false }
 func (v Nil) assertString() (string, bool)   { return "", false }
 
+func (v Nil) IsTrue() bool { return false }
 func (v Nil) String() string {
   return "nil"
 }
 
-func (v Bool) Type() ValueType                { return ValueBool }
+
+// Bool
+
 func (v Bool) assertFloat64() (float64, bool) { return 0, false }
 func (v Bool) assertBool() (bool, bool)       { return bool(v), true }
 func (v Bool) assertString() (string, bool)   { return "", false }
 
+func (v Bool) Type() ValueType { return ValueBool }
+func (v Bool) IsTrue() bool    { return bool(v) }
 func (v Bool) String() string {
   if bool(v) {
     return "true"
   }
   return "false"
 }
+
+// Number
 
 func (v Number) Type() ValueType                { return ValueNumber }
 func (v Number) assertFloat64() (float64, bool) { return float64(v), true }
@@ -78,11 +91,16 @@ func (v Number) String() string {
   return fmt.Sprint(float64(v))
 }
 
+func (v Number) IsTrue() bool { return true }
+
+// String
+
 func (v String) Type() ValueType                { return ValueString }
 func (v String) assertFloat64() (float64, bool) { return 0, false }
 func (v String) assertBool() (bool, bool)       { return false, false }
 func (v String) assertString() (string, bool)   { return string(v), true }
 
+func (v String) IsTrue() bool { return true }
 func (v String) String() string {
   return string(v)
 }

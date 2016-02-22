@@ -1,4 +1,4 @@
-# Elo
+# Went
 is a dynamic scripting language targeted to be easily embeddable in host Go applications. It's overall design and syntax are inspired from Go itself, so there's almost no learning curve at all if you are already a Go developer.
 
 This is a very early work in progress and a self-learning experience foremost, but pull requests are more than welcome.
@@ -37,7 +37,7 @@ func factorial(n) -> n <= 1 ? n : n * factorial(n - 1)
 The `tests` folder contains some more examples, but they might be completely non-sense and change frequently since they're just tests. When the syntax is completely defined I'll create an `examples` folder with working code.
 
 ## Objects
-Objects are the only hash-like structure in Elo, they map strings (and only strings) to values. The literal syntax is almost identical to maps in Go:
+Objects are the only hash-like structure in Went, they map strings (and only strings) to values. The literal syntax is almost identical to maps in Go:
 ```go
 // map books names to their authors
 authors := {
@@ -111,7 +111,7 @@ someBook.["comparePrice"](otherBook)
 ```
 
 ## Modules
-Every .elo file is a module, which is just a top-level function that can contain any statement, not just declarations as in Go.
+Every .went file is a module, which is just a top-level function that can contain any statement, not just declarations as in Go.
 To import a module, you can use the `import` built-in function:
 ```go
 // import the 'fmt' module
@@ -121,7 +121,7 @@ fmt := import('fmt')
 Now, the `fmt` variable is an object containing all the public functions and values from the `fmt` module.
 "Public" is whatever the requested module returns, for example:
 ```go
-// file: fib.elo
+// file: fib.went
 
 // returns the [n]th number in the fibbonaci sequence
 func nth(n) {

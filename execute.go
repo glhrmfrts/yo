@@ -2,7 +2,7 @@
 //
 // Main interpreter loop and core operations
 
-package elo
+package went
 
 import (
   "fmt"
@@ -30,9 +30,25 @@ func init() {
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpLoadGlobal
+      a, bx := OpGetA(instr), OpGetBx(instr)
+      str := cf.fn.Proto.Consts[bx].String()
+      if g, ok := state.Globals[str]; ok {
+        cf.r[a] = g
+      } else {
+        // throw error
+        return 1
+      }
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpSetGlobal
+      a, bx := OpGetA(instr), OpGetBx(instr)
+      str := cf.fn.Proto.Consts[bx].String()
+      if _, ok := state.Globals[str]; ok {
+        state.Globals[str] = cf.r[a]
+      } else {
+        // throw error
+        return 1
+      }
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpLoadRef
@@ -41,13 +57,47 @@ func init() {
     func(state *State, cf *callFrame, instr uint32) int { // OpSetRef
       return 0
     },
-    func(state *State, cf *callFrame, instr uint32) int { // OpNeg
+    func(state *State, cf *callFrame, instr uint32) int { // OpUnm
+      a, bx := OpGetA(instr), OpGetBx(instr)
+      var bv Value
+      if bx >= OpConstOffset {
+        bv = cf.fn.Proto.Consts[bx-OpConstOffset]
+      } else {
+        bv = cf.r[bx]
+      }
+      f, ok := bv.assertFloat64()
+      if !ok {
+        // throw error
+        return 1
+      }
+      cf.r[a] = Number(-f)
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpNot
+      a, bx := OpGetA(instr), OpGetBx(instr)
+      var bv Value
+      if bx >= OpConstOffset {
+        bv = cf.fn.Proto.Consts[bx-OpConstOffset]
+      } else {
+        bv = cf.r[bx]
+      }
+      cf.r[a] = Bool(!bv.IsTrue())
       return 0
     },
     func(state *State, cf *callFrame, instr uint32) int { // OpCmpl
+      a, bx := OpGetA(instr), OpGetBx(instr)
+      var bv Value
+      if bx >= OpConstOffset {
+        bv = cf.fn.Proto.Consts[bx-OpConstOffset]
+      } else {
+        bv = cf.r[bx]
+      }
+      f, ok := bv.assertFloat64()
+      if !ok || isInt(f) {
+        // throw error
+        return 1
+      }
+      cf.r[a] = Number(float64(^int(f)))
       return 0
     },
     opArith, // OpAdd
@@ -117,12 +167,12 @@ func init() {
 func opArith(state *State, cf *callFrame, instr uint32) int {
   var vb, vc Value
   a, b, c := OpGetA(instr), OpGetB(instr), OpGetC(instr)
-  if b > OpConstOffset {
+  if b >= OpConstOffset {
     vb = cf.fn.Proto.Consts[b-OpConstOffset]
   } else {
     vb = cf.r[b]
   }
-  if c > OpConstOffset {
+  if c >= OpConstOffset {
     vc = cf.fn.Proto.Consts[c-OpConstOffset]
   } else {
     vc = cf.r[c]
@@ -165,12 +215,12 @@ func numberArith(op Opcode, a, b float64) float64 {
 func opCmp(state *State, cf *callFrame, instr uint32) int {
   var vb, vc Value
   a, b, c := OpGetA(instr), OpGetB(instr), OpGetC(instr)
-  if b > OpConstOffset {
+  if b >= OpConstOffset {
     vb = cf.fn.Proto.Consts[b-OpConstOffset]
   } else {
     vb = cf.r[b]
   }
-  if c > OpConstOffset {
+  if c >= OpConstOffset {
     vc = cf.fn.Proto.Consts[c-OpConstOffset]
   } else {
     vc = cf.r[c]

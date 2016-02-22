@@ -1,11 +1,11 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package elo
+package went
 
 import (
   "fmt"
   "math"
-  "github.com/glhrmfrts/elo/ast"
+  "github.com/glhrmfrts/went/ast"
 )
 
 type (
@@ -856,7 +856,7 @@ func (c *compiler) VisitUnaryExpr(node *ast.UnaryExpr, data interface{}) {
     var op Opcode
     switch node.Op {
     case ast.TokenMinus:
-      op = OpNeg
+      op = OpUnm
     case ast.TokenNot, ast.TokenBang:
       op = OpNot
     case ast.TokenTilde:

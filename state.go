@@ -1,4 +1,4 @@
-package elo
+package went
 
 import (
 )
@@ -23,11 +23,10 @@ type callFrameStack struct {
 type State struct {
   currentFrame *callFrame
   calls        callFrameStack
-
-  // temporary
-  globals      map[string]Value
+  Globals      map[string]Value
 }
 
+// callFrameStack
 
 func (stack *callFrameStack) New() *callFrame {
   stack.sp += 1
@@ -41,6 +40,12 @@ func (stack *callFrameStack) Last() *callFrame {
   return &stack.stack[stack.sp-1]
 }
 
+// State
+
+func (state *State) DefineGlobal(name string, v Value) {
+  state.Globals[name] = v
+}
+
 func (state *State) RunProto(proto *FuncProto) {
   state.currentFrame = state.calls.New()
   state.currentFrame.fn = &Func{proto}
@@ -50,6 +55,6 @@ func (state *State) RunProto(proto *FuncProto) {
 
 func NewState() *State {
   return &State{
-    globals: make(map[string]Value, 128),
+    Globals: make(map[string]Value, 128),
   }
 }

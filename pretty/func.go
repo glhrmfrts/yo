@@ -8,7 +8,7 @@ package pretty
 import (
   "fmt"
   "bytes"
-  elo "github.com/glhrmfrts/elo"
+  "github.com/glhrmfrts/went"
 )
 
 func doIndent(buf *bytes.Buffer, indent int) {
@@ -18,7 +18,7 @@ func doIndent(buf *bytes.Buffer, indent int) {
   }
 }
 
-func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
+func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
   buf.WriteString("\n\n")
   doIndent(buf, indent)
   buf.WriteString(fmt.Sprintf("function at %s {{{\n", f.Source))
@@ -40,8 +40,8 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
   buf.WriteString("line\t#\topcode\t\targs\n")
 
   getRegOrConst := func(a uint) string {
-    if a >= elo.OpConstOffset {
-      return fmt.Sprint(f.Consts[a-elo.OpConstOffset])
+    if a >= went.OpConstOffset {
+      return fmt.Sprint(f.Consts[a-went.OpConstOffset])
     } else {
       return fmt.Sprintf("!%d", a)
     }
@@ -57,7 +57,7 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
     }
 
     line := f.Lines[currentLine]
-    opcode := elo.OpGetOpcode(instr)
+    opcode := went.OpGetOpcode(instr)
     pc := i + 1
 
     if lineChanged || i == 0 {
@@ -70,54 +70,54 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
     buf.WriteString(fmt.Sprint("\t", opcode, "\t"))
 
     switch opcode {
-    case elo.OpLoadnil:
-      buf.WriteString(fmt.Sprintf("\t!%d !%d", elo.OpGetA(instr), elo.OpGetB(instr)))
-    case elo.OpLoadconst:
-      buf.WriteString(fmt.Sprintf("!%d %s", elo.OpGetA(instr), f.Consts[elo.OpGetBx(instr)]))
-    case elo.OpNeg, elo.OpNot, elo.OpCmpl:
-      bx := elo.OpGetBx(instr)
+    case went.OpLoadnil:
+      buf.WriteString(fmt.Sprintf("\t!%d !%d", went.OpGetA(instr), went.OpGetB(instr)))
+    case went.OpLoadconst:
+      buf.WriteString(fmt.Sprintf("!%d %s", went.OpGetA(instr), f.Consts[went.OpGetBx(instr)]))
+    case went.OpUnm, went.OpNot, went.OpCmpl:
+      bx := went.OpGetBx(instr)
       bstr := getRegOrConst(bx)
-      buf.WriteString(fmt.Sprintf("\t!%d %s", elo.OpGetA(instr), bstr))
-    case elo.OpAdd, elo.OpSub, elo.OpMul, elo.OpDiv, elo.OpPow, elo.OpShl, elo.OpShr, 
-        elo.OpAnd, elo.OpOr, elo.OpXor, elo.OpLe, elo.OpLt, elo.OpEq, elo.OpNe, elo.OpGet, elo.OpSet:
-      a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
+      buf.WriteString(fmt.Sprintf("\t!%d %s", went.OpGetA(instr), bstr))
+    case went.OpAdd, went.OpSub, went.OpMul, went.OpDiv, went.OpPow, went.OpShl, went.OpShr, 
+        went.OpAnd, went.OpOr, went.OpXor, went.OpLe, went.OpLt, went.OpEq, went.OpNe, went.OpGet, went.OpSet:
+      a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
       bstr, cstr := getRegOrConst(b), getRegOrConst(c)
       buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
-    case elo.OpAppend, elo.OpReturn:
-      a, b := elo.OpGetA(instr), elo.OpGetB(instr)
+    case went.OpAppend, went.OpReturn:
+      a, b := went.OpGetA(instr), went.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d #%d", a, b))
-    case elo.OpMove:
-      a, b := elo.OpGetA(instr), elo.OpGetB(instr)
+    case went.OpMove:
+      a, b := went.OpGetA(instr), went.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
-    case elo.OpLoadglobal, elo.OpSetglobal:
-      a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
+    case went.OpLoadglobal, went.OpSetglobal:
+      a, bx := went.OpGetA(instr), went.OpGetBx(instr)
       buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
-    case elo.OpLoadref, elo.OpSetref:
-      a, bx := elo.OpGetA(instr), elo.OpGetBx(instr)
+    case went.OpLoadref, went.OpSetref:
+      a, bx := went.OpGetA(instr), went.OpGetBx(instr)
       buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
-    case elo.OpCall, elo.OpCallmethod:
-      a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
-      if opcode == elo.OpCall {
+    case went.OpCall, went.OpCallmethod:
+      a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
+      if opcode == went.OpCall {
         buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
       } else {
         buf.WriteString(fmt.Sprintf("!%d #%d #%d", a, b, c))
       }
-    case elo.OpArray, elo.OpObject:
-      buf.WriteString(fmt.Sprintf("\t!%d", elo.OpGetA(instr)))
-    case elo.OpFunc:
-      buf.WriteString(fmt.Sprintf("\t!%d &%d", elo.OpGetA(instr), elo.OpGetBx(instr)))
-    case elo.OpJmp:
-      sbx := elo.OpGetsBx(instr)
+    case went.OpArray, went.OpObject:
+      buf.WriteString(fmt.Sprintf("\t!%d", went.OpGetA(instr)))
+    case went.OpFunc:
+      buf.WriteString(fmt.Sprintf("\t!%d &%d", went.OpGetA(instr), went.OpGetBx(instr)))
+    case went.OpJmp:
+      sbx := went.OpGetsBx(instr)
       buf.WriteString(fmt.Sprintf("\t->%d", pc + sbx))
-    case elo.OpJmptrue, elo.OpJmpfalse:
-      a, sbx := elo.OpGetA(instr), elo.OpGetsBx(instr)
+    case went.OpJmptrue, went.OpJmpfalse:
+      a, sbx := went.OpGetA(instr), went.OpGetsBx(instr)
       astr := getRegOrConst(a)
       buf.WriteString(fmt.Sprintf("%s ->%d", astr, pc + sbx))
-    case elo.OpForbegin:
-      a, b := elo.OpGetA(instr), elo.OpGetB(instr)
+    case went.OpForbegin:
+      a, b := went.OpGetA(instr), went.OpGetB(instr)
       buf.WriteString(fmt.Sprintf("!%d !%d", a, b))
-    case elo.OpForiter:
-      a, b, c := elo.OpGetA(instr), elo.OpGetB(instr), elo.OpGetC(instr)
+    case went.OpForiter:
+      a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
       buf.WriteString(fmt.Sprintf("\t!%d !%d !%d", a, b, c))
     }
 
@@ -128,7 +128,7 @@ func disasmImpl(f *elo.FuncProto, buf *bytes.Buffer, indent int) {
   buf.WriteString("}}}\n\n\n")
 }
 
-func Disasm(f *elo.FuncProto) string {
+func Disasm(f *went.FuncProto) string {
   var buf bytes.Buffer
   disasmImpl(f, &buf, 0)
   return buf.String()
