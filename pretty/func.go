@@ -79,7 +79,8 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 			bstr := getRegOrConst(bx)
 			buf.WriteString(fmt.Sprintf("\t!%d %s", went.OpGetA(instr), bstr))
 		case went.OpAdd, went.OpSub, went.OpMul, went.OpDiv, went.OpPow, went.OpShl, went.OpShr,
-			went.OpAnd, went.OpOr, went.OpXor, went.OpLe, went.OpLt, went.OpEq, went.OpNe, went.OpGet, went.OpSet:
+			went.OpAnd, went.OpOr, went.OpXor, went.OpLe, went.OpLt, went.OpEq, went.OpNe, 
+			went.OpGetIndex, went.OpSetIndex, went.OpGetField, went.OpSetField:
 			a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
 			bstr, cstr := getRegOrConst(b), getRegOrConst(c)
 			buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))

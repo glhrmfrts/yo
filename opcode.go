@@ -46,9 +46,11 @@ const (
 	OpEq  //  R(A) = RK(B) == RK(C)
 	OpNe  //  R(A) = RK(B) != RK(C)
 
-	OpMove   //  R(A) = R(B)
-	OpGet    //  R(A) = R(B)[RK(C)]
-	OpSet    //  R(A)[RK(B)] = RK(C)
+	OpMove   			//  R(A) = R(B)
+	OpGetIndex    //  R(A) = R(B)[RK(C)]
+	OpSetIndex    //  R(A)[RK(B)] = RK(C)
+	OpGetField		//  R(A) = R(B).RK(C)
+	OpSetField		//  R(A).RK(B) = RK(C)
 	OpAppend //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
 	OpCall       //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
@@ -118,8 +120,10 @@ var (
 		OpNe:  "ne",
 
 		OpMove:   "move",
-		OpGet:    "get",
-		OpSet:    "set",
+		OpGetIndex:    "getindex",
+		OpSetIndex:    "setindex",
+		OpGetField:    "getfield",
+		OpSetField:    "setfield",
 		OpAppend: "append",
 
 		OpCall:       "call",

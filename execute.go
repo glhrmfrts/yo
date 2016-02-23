@@ -118,10 +118,16 @@ func init() {
 			cf.r[a] = cf.r[b]
 			return 0
 		},
-		func(state *State, cf *callFrame, instr uint32) int { // OpGet
+		func(state *State, cf *callFrame, instr uint32) int { // OpGetIndex
 			return 0
 		},
-		func(state *State, cf *callFrame, instr uint32) int { // OpSet
+		func(state *State, cf *callFrame, instr uint32) int { // OpSetIndex
+			return 0
+		},
+		func(state *State, cf *callFrame, instr uint32) int { // OpGetField
+			return 0
+		},
+		func(state *State, cf *callFrame, instr uint32) int { // OpSetField
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpAppend

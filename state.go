@@ -1,6 +1,7 @@
 package went
 
-import ()
+import (
+)
 
 const (
 	MaxRegisters  = 249

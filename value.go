@@ -6,9 +6,12 @@ import (
 	"fmt"
 )
 
-type ValueType int
-
 type (
+	// ValueType is an internal enumeration which identifies
+	// the type of the values without the need for type assertion.
+	ValueType int
+
+	// Value interface
 	Value interface {
 		// manual type retrieval seems to be faster than
 		// go's interface type assertion (runtime.I2T2)
@@ -16,33 +19,62 @@ type (
 		assertBool() (bool, bool)
 		assertString() (string, bool)
 
+		// Type returns the corresponding ValueType enumeration value
+		// of this value.
 		Type() ValueType
+
+		// String returns the representation of this value as a string,
+		// it is the default way to convert a value to a string.
 		String() string
+
+		// ToBool converts the value to a boolean value.
+		// If it's is nil or false it returns false, otherwise returns true.
 		ToBool() bool
 	}
 
+	// Nil represents the absence of a usable value.
 	Nil struct{}
 
+	// Bool can be either true or false.
 	Bool bool
 
+	// A Number is a double-precision floating point number.
 	Number float64
 
+	// A String is an immutable sequence of bytes.
 	String string
 
+	// GoFunc is a function defined in the host application, which
+	// is callable from the script.
 	GoFunc func(*State) int
 
+	// Func is a function defined in the script.
 	Func struct {
 		Proto *FuncProto
 	}
 
+	// Array is a collection of Values stored contiguously in memory,
+	// it's index starts at 0.
 	Array []Value
 
+	// Object is a map that maps strings to Values, and may have a
+	// parent Object which is used to look for keys that are not in it's own map.
 	Object struct {
 		Parent *Object
 		Fields map[string]Value
 	}
 
-	Channel chan Value
+	// GoObject is an object that allows the host application to maintain
+	// custom data throughout the script, the script user will see it as
+	// a regular object.
+	GoObject struct {
+		Object
+		Data   interface{}
+	}
+
+	// Chan is an object that allows goroutines to 
+	// communicate/send Values to one another.
+	Chan chan Value
 )
 
 const (
@@ -50,6 +82,14 @@ const (
 	ValueBool
 	ValueNumber
 	ValueString
+	ValueFunc
+	ValueArray
+	ValueObject
+	ValueChan
+)
+
+var (
+	valueTypeNames = [8]string{"nil", "bool", "number", "string", "func", "array", "object", "chan"}
 )
 
 // Nil

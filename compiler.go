@@ -468,14 +468,14 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
 		subData := exprdata{true, assignReg, assignReg}
 		v.Right.Accept(c, &subData)
 		subReg := subData.regb
-		c.emitABC(OpSet, arrReg, subReg, valueReg, v.NodeInfo.Line)
+		c.emitABC(OpSetIndex, arrReg, subReg, valueReg, v.NodeInfo.Line)
 	case *ast.Selector:
 		objData := exprdata{true, assignReg, assignReg}
 		v.Left.Accept(c, &objData)
 		objReg := objData.regb
 		key := OpConstOffset + c.addConst(String(v.Value))
 
-		c.emitABC(OpSet, objReg, key, valueReg, v.NodeInfo.Line)
+		c.emitABC(OpSetField, objReg, key, valueReg, v.NodeInfo.Line)
 	}
 }
 
@@ -653,7 +653,7 @@ func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
 	node.Value.Accept(c, &valueData)
 	value := valueData.regb
 
-	c.emitABC(OpSet, objreg, key, value, node.NodeInfo.Line)
+	c.emitABC(OpSetField, objreg, key, value, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
@@ -736,7 +736,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
 	objReg := objData.regb
 
 	key := OpConstOffset + c.addConst(String(node.Value))
-	c.emitABC(OpGet, reg, objReg, key, node.NodeInfo.Line)
+	c.emitABC(OpGetField, reg, objReg, key, node.NodeInfo.Line)
 	if exprok && expr.propagate {
 		expr.regb = objReg
 	}
@@ -763,7 +763,7 @@ func (c *compiler) VisitSubscript(node *ast.Subscript, data interface{}) {
 	indexData := exprdata{true, reg + 1, reg + 1}
 	node.Right.Accept(c, &indexData)
 	indexReg := indexData.regb
-	c.emitABC(OpGet, reg, arrReg, indexReg, node.NodeInfo.Line)
+	c.emitABC(OpGetIndex, reg, arrReg, indexReg, node.NodeInfo.Line)
 
 	if exprok && expr.propagate {
 		expr.regb = reg
@@ -1135,7 +1135,7 @@ func (c *compiler) VisitForIteratorStmt(node *ast.ForIteratorStmt, data interfac
 	jmpInstr := c.emitAsBx(OpJmpfalse, testReg, 0, c.lastLine)
 
 	c.emitABC(OpForiter, keyReg, colReg, arrReg, node.NodeInfo.Line)
-	c.emitABC(OpGet, valReg, colReg, keyReg, c.lastLine)
+	c.emitABC(OpGetIndex, valReg, colReg, keyReg, c.lastLine)
 
 	node.Body.Accept(c, nil)
 	c.block.loop.continueTarget = c.newLabel()
