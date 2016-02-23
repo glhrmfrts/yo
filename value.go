@@ -69,10 +69,10 @@ type (
 	// a regular object.
 	GoObject struct {
 		Object
-		Data   interface{}
+		Data interface{}
 	}
 
-	// Chan is an object that allows goroutines to 
+	// Chan is an object that allows goroutines to
 	// communicate/send Values to one another.
 	Chan chan Value
 )

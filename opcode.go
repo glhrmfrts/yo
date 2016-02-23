@@ -46,12 +46,12 @@ const (
 	OpEq  //  R(A) = RK(B) == RK(C)
 	OpNe  //  R(A) = RK(B) != RK(C)
 
-	OpMove   			//  R(A) = R(B)
-	OpGetIndex    //  R(A) = R(B)[RK(C)]
-	OpSetIndex    //  R(A)[RK(B)] = RK(C)
-	OpGetField		//  R(A) = R(B).RK(C)
-	OpSetField		//  R(A).RK(B) = RK(C)
-	OpAppend //  R(A) = append(R(A), R(A+1) ... R(A+B))
+	OpMove     //  R(A) = R(B)
+	OpGetIndex //  R(A) = R(B)[RK(C)]
+	OpSetIndex //  R(A)[RK(B)] = RK(C)
+	OpGetField //  R(A) = R(B).RK(C)
+	OpSetField //  R(A).RK(B) = RK(C)
+	OpAppend   //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
 	OpCall       //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
 	OpCallmethod //  same as OpCall, but first argument is the receiver
@@ -119,12 +119,12 @@ var (
 		OpEq:  "eq",
 		OpNe:  "ne",
 
-		OpMove:   "move",
-		OpGetIndex:    "getindex",
-		OpSetIndex:    "setindex",
-		OpGetField:    "getfield",
-		OpSetField:    "setfield",
-		OpAppend: "append",
+		OpMove:     "move",
+		OpGetIndex: "getindex",
+		OpSetIndex: "setindex",
+		OpGetField: "getfield",
+		OpSetField: "setfield",
+		OpAppend:   "append",
 
 		OpCall:       "call",
 		OpCallmethod: "callmethod",
