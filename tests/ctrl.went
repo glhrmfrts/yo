@@ -1,12 +1,4 @@
 // test control-flow structures
 
-import "reflect", "env"
-
-for i, v in [1, 2, 3]:
-	if false:
-		continue
-	print v, type v
-
-func nice:
-	println 2
-
+var b
+b = b || 5

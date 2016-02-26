@@ -124,12 +124,6 @@ func init() {
 		func(state *State, cf *callFrame, instr uint32) int { // OpSetIndex
 			return 0
 		},
-		func(state *State, cf *callFrame, instr uint32) int { // OpGetField
-			return 0
-		},
-		func(state *State, cf *callFrame, instr uint32) int { // OpSetField
-			return 0
-		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpAppend
 			return 0
 		},

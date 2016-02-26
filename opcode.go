@@ -24,8 +24,8 @@ const (
 	OpLoadconst                //  R(A) = K(Bx)
 	OpLoadglobal               //  R(A) = globals[K(Bx)]
 	OpSetglobal                //  globals[K(Bx)] = R(A)
-	OpLoadref                  //  R(A) = refs[K(Bx)]
-	OpSetref                   //  refs[K(Bx)] = R(A)
+	OpLoadFree                 //  R(A) = refs[K(Bx)]
+	OpSetFree                  //  refs[K(Bx)] = R(A)
 
 	OpUnm  //  R(A) = -RK(Bx)
 	OpNot  //  R(A) = NOT RK(Bx)
@@ -49,8 +49,6 @@ const (
 	OpMove     //  R(A) = R(B)
 	OpGetIndex //  R(A) = R(B)[RK(C)]
 	OpSetIndex //  R(A)[RK(B)] = RK(C)
-	OpGetField //  R(A) = R(B).RK(C)
-	OpSetField //  R(A).RK(B) = RK(C)
 	OpAppend   //  R(A) = append(R(A), R(A+1) ... R(A+B))
 
 	OpCall       //  R(A) ... R(A+B-1) = R(A)(R(A+B) ... R(A+B+C-1))
@@ -97,8 +95,8 @@ var (
 		OpLoadconst:  "loadconst",
 		OpLoadglobal: "loadglobal",
 		OpSetglobal:  "setglobal",
-		OpLoadref:    "loadref",
-		OpSetref:     "setref",
+		OpLoadFree:   "loadfree",
+		OpSetFree:    "setfree",
 
 		OpUnm:  "neg",
 		OpNot:  "not",
@@ -122,8 +120,6 @@ var (
 		OpMove:     "move",
 		OpGetIndex: "getindex",
 		OpSetIndex: "setindex",
-		OpGetField: "getfield",
-		OpSetField: "setfield",
 		OpAppend:   "append",
 
 		OpCall:       "call",

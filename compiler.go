@@ -456,7 +456,7 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
 		case kScopeRef, kScopeGlobal:
 			op := OpSetglobal
 			if scope == kScopeRef {
-				op = OpSetref
+				op = OpSetFree
 			}
 			c.emitABx(op, valueReg, c.addConst(String(v.Value)), v.NodeInfo.Line)
 		}
@@ -475,7 +475,7 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
 		objReg := objData.regb
 		key := OpConstOffset + c.addConst(String(v.Value))
 
-		c.emitABC(OpSetField, objReg, key, valueReg, v.NodeInfo.Line)
+		c.emitABC(OpSetIndex, objReg, key, valueReg, v.NodeInfo.Line)
 	}
 }
 
@@ -604,7 +604,7 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
 	case kScopeRef, kScopeGlobal:
 		op := OpLoadglobal
 		if scope == kScopeRef {
-			op = OpLoadref
+			op = OpLoadFree
 		}
 		c.emitABx(op, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
 		if exprok && expr.propagate {
@@ -653,7 +653,7 @@ func (c *compiler) VisitObjectField(node *ast.ObjectField, data interface{}) {
 	node.Value.Accept(c, &valueData)
 	value := valueData.regb
 
-	c.emitABC(OpSetField, objreg, key, value, node.NodeInfo.Line)
+	c.emitABC(OpSetIndex, objreg, key, value, node.NodeInfo.Line)
 }
 
 func (c *compiler) VisitObject(node *ast.Object, data interface{}) {
@@ -736,7 +736,7 @@ func (c *compiler) VisitSelector(node *ast.Selector, data interface{}) {
 	objReg := objData.regb
 
 	key := OpConstOffset + c.addConst(String(node.Value))
-	c.emitABC(OpGetField, reg, objReg, key, node.NodeInfo.Line)
+	c.emitABC(OpGetIndex, reg, objReg, key, node.NodeInfo.Line)
 	if exprok && expr.propagate {
 		expr.regb = objReg
 	}
@@ -932,11 +932,14 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
 			left := exprdata.regb
 
 			jmpInstr := c.emitAsBx(op, left, 0, node.NodeInfo.Line)
-			size := c.block.proto.NumCode
+			rightLabel := c.newLabel()
 
 			exprdata.propagate = false
+			if exprok {
+				exprdata.propagate = expr.propagate
+			}
 			node.Right.Accept(c, &exprdata)
-			c.modifyAsBx(jmpInstr, op, left, int(c.block.proto.NumCode-size))
+			c.modifyAsBx(jmpInstr, op, left, c.labelOffset(rightLabel))
 			return
 		}
 
@@ -1035,7 +1038,15 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
 		}
 		c.declare(names, node.Right)
 		return
+	} else if node.Op != ast.TokenEq {
+		// compound assignment
+		// a += b -> a = a + b
+		bin := ast.BinaryExpr{Op: ast.CompoundOp(node.Op), Left: node.Left[0], Right: node.Right[0]}
+		fake := ast.Assignment{Op: ast.TokenEq, Left: node.Left, Right: []ast.Node{&bin}}
+		fake.Accept(c, nil)
+		return
 	}
+
 	// regular assignment, if the left-side is an identifier
 	// then it has to be declared already
 	varCount, valueCount := len(node.Left), len(node.Right)

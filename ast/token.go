@@ -212,6 +212,26 @@ func IsAssignOp(tok Token) bool {
 	return tok >= assignOpBegin && tok <= assignOpEnd
 }
 
+func CompoundOp(tok Token) Token {
+	switch tok {
+	case TokenPluseq:
+		return TokenPlus
+	case TokenMinuseq:
+		return TokenMinus
+	case TokenTimeseq:
+		return TokenTimes
+	case TokenDiveq:
+		return TokenDiv
+	case TokenAmpeq:
+		return TokenAmp
+	case TokenPipeeq:
+		return TokenPipe
+	case TokenTildeeq:
+		return TokenTilde
+	}
+	return Token(-1)
+}
+
 func Precedence(tok Token) int {
 	return precedences[int(tok-binaryOpBegin-1)]
 }

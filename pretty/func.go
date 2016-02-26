@@ -80,7 +80,7 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 			buf.WriteString(fmt.Sprintf("\t!%d %s", went.OpGetA(instr), bstr))
 		case went.OpAdd, went.OpSub, went.OpMul, went.OpDiv, went.OpPow, went.OpShl, went.OpShr,
 			went.OpAnd, went.OpOr, went.OpXor, went.OpLe, went.OpLt, went.OpEq, went.OpNe, 
-			went.OpGetIndex, went.OpSetIndex, went.OpGetField, went.OpSetField:
+			went.OpGetIndex, went.OpSetIndex:
 			a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
 			bstr, cstr := getRegOrConst(b), getRegOrConst(c)
 			buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
@@ -93,7 +93,7 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 		case went.OpLoadglobal, went.OpSetglobal:
 			a, bx := went.OpGetA(instr), went.OpGetBx(instr)
 			buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
-		case went.OpLoadref, went.OpSetref:
+		case went.OpLoadFree, went.OpSetFree:
 			a, bx := went.OpGetA(instr), went.OpGetBx(instr)
 			buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
 		case went.OpCall, went.OpCallmethod:
