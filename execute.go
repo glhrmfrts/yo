@@ -143,12 +143,33 @@ func init() {
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpJmp
+			cf.pc += OpGetsBx(instr)
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpJmpTrue
+			a := OpGetA(instr)
+			var val Value
+			if a >= OpConstOffset {
+				val = cf.fn.Proto.Consts[a-OpConstOffset]
+			} else {
+				val = cf.r[a]
+			}
+			if val.ToBool() {
+				cf.pc += OpGetsBx(instr)
+			}
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpJmpFalse
+			a := OpGetA(instr)
+			var val Value
+			if a >= OpConstOffset {
+				val = cf.fn.Proto.Consts[a-OpConstOffset]
+			} else {
+				val = cf.r[a]
+			}
+			if !val.ToBool() {
+				cf.pc += OpGetsBx(instr)
+			}
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpReturn
