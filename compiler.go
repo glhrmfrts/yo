@@ -407,7 +407,6 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
 			c.error(id.NodeInfo.Line, fmt.Sprintf("cannot redeclare '%s'", id.Value))
 		}
 		reg := c.genRegister()
-		c.block.addNameInfo(id.Value, &nameInfo{false, nil, reg, kScopeLocal, c.block})
 
 		exprdata := exprdata{false, reg, reg}
 		if i == valueCount-1 && (isCall || isUnpack) {
@@ -427,12 +426,13 @@ func (c *compiler) declare(names []*ast.Id, values []ast.Node) {
 			}
 			exprdata.regb, start = end, end+1
 			values[i].Accept(c, &exprdata)
-			break
-		}
-		if i < valueCount {
+		} else if i < valueCount {
 			values[i].Accept(c, &exprdata)
 			start = reg + 1
 		}
+
+		// add name info after the value (the variable should not be visible to it's own initializer)
+		c.block.addNameInfo(id.Value, &nameInfo{false, nil, reg, kScopeLocal, c.block})
 	}
 	if end >= start {
 		// variables without initializer are set to nil
@@ -927,17 +927,13 @@ func (c *compiler) VisitBinaryExpr(node *ast.BinaryExpr, data interface{}) {
 			} else {
 				op = OpJmptrue
 			}
-			exprdata := exprdata{true, reg, reg}
+			exprdata := exprdata{expr.propagate, reg, reg}
 			node.Left.Accept(c, &exprdata)
 			left := exprdata.regb
 
 			jmpInstr := c.emitAsBx(op, left, 0, node.NodeInfo.Line)
 			rightLabel := c.newLabel()
 
-			exprdata.propagate = false
-			if exprok {
-				exprdata.propagate = expr.propagate
-			}
 			node.Right.Accept(c, &exprdata)
 			c.modifyAsBx(jmpInstr, op, left, c.labelOffset(rightLabel))
 			return
