@@ -66,9 +66,9 @@ price := Book.price
 Book.price = 57.50
 ```
 
-With object inheritance, you can create an object from another object, they'll share the same properties, but each with it's own values. For that, there's the built-in function `inherit`:
+With object inheritance, you can create an object from another object, they'll share the same properties, but each with it's own values. For that, there's the built-in function `new`:
 ```go
-timeMachine := inherit(Book)
+timeMachine := new(Book)
 timeMachine.name = "The Time Machine"
 timeMachine.author = "H.G. Wells"
 timeMachine.price = 57.50
