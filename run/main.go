@@ -35,5 +35,5 @@ func main() {
 	fmt.Println(pretty.Disasm(code))
 
 	state := went.NewState()
-	state.RunProto(code)
+	state.LoadProto(code)
 }

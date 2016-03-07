@@ -753,9 +753,7 @@ func (p *parser) program() ast.Node {
 	return &ast.Block{Nodes: nodes}
 }
 
-//
 // initialization of parser
-//
 
 func (p *parser) init(source []byte, filename string) {
 	p.ignoreNewlines = true
@@ -777,7 +775,7 @@ func ParseExpr(source []byte) (expr ast.Node, err error) {
 	}()
 
 	var p parser
-	p.init(source, "")
+	p.init(source, "<expr>")
 	expr = p.expr()
 	return
 }

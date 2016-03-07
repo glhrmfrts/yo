@@ -327,7 +327,4 @@ func execute(state *State) {
 		cf = state.currentFrame
 		proto = cf.fn.Proto
 	}
-
-	fmt.Println(cf.r)
-	fmt.Println(cf.line)
 }

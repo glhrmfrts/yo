@@ -1,6 +1,8 @@
 package went
 
-import ()
+import (
+	"github.com/glhrmfrts/went/parse"
+)
 
 const (
 	MaxRegisters  = 249
@@ -45,11 +47,26 @@ func (state *State) DefineGlobal(name string, v Value) {
 	state.Globals[name] = v
 }
 
-func (state *State) RunProto(proto *FuncProto) {
+func (state *State) LoadString(source []byte, filename string) (Value, error) {
+	nodes, err := parse.ParseFile(source, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	proto, err := Compile(nodes, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return state.LoadProto(proto)
+}
+
+func (state *State) LoadProto(proto *FuncProto) (Value, error) {
 	state.currentFrame = state.calls.New()
 	state.currentFrame.fn = &Func{proto}
 
 	execute(state)
+	return Nil{}, nil
 }
 
 func NewState() *State {
