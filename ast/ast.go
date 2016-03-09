@@ -155,6 +155,11 @@ type (
 		Values []Node
 	}
 
+	PanicStmt struct {
+		NodeInfo
+		Err Node
+	}
+
 	IfStmt struct {
 		NodeInfo
 		Init *Assignment
@@ -178,6 +183,19 @@ type (
 		Cond Node
 		Step Node
 		Body Node
+	}
+
+	RecoverBlock struct {
+		NodeInfo
+		Id    *Id
+		Block *Block
+	}
+
+	TryRecoverStmt struct {
+		NodeInfo
+		Try     *Block
+		Recover *RecoverBlock
+		Finally *Block
 	}
 
 	Block struct {
@@ -278,6 +296,10 @@ func (node *ReturnStmt) Accept(v Visitor, data interface{}) {
 	v.VisitReturnStmt(node, data)
 }
 
+func (node *PanicStmt) Accept(v Visitor, data interface{}) {
+	v.VisitPanicStmt(node, data)
+}
+
 func (node *IfStmt) Accept(v Visitor, data interface{}) {
 	v.VisitIfStmt(node, data)
 }
@@ -288,6 +310,14 @@ func (node *ForIteratorStmt) Accept(v Visitor, data interface{}) {
 
 func (node *ForStmt) Accept(v Visitor, data interface{}) {
 	v.VisitForStmt(node, data)
+}
+
+func (node *RecoverBlock) Accept(v Visitor, data interface{}) {
+	v.VisitRecoverBlock(node, data)
+}
+
+func (node *TryRecoverStmt) Accept(v Visitor, data interface{}) {
+	v.VisitTryRecoverStmt(node, data)
 }
 
 func (node *Block) Accept(v Visitor, data interface{}) {

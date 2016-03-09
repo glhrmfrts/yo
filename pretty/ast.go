@@ -341,6 +341,15 @@ func (p *prettyprinter) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) 
 	p.buf.WriteString(")")
 }
 
+func (p *prettyprinter) VisitPanicStmt(node *ast.PanicStmt, data interface{}) {
+	p.buf.WriteString("(panic\n")
+	p.indent++
+	p.doIndent()
+	node.Err.Accept(p, nil)
+	p.indent--
+	p.buf.WriteString(")")
+}
+
 func (p *prettyprinter) VisitIfStmt(node *ast.IfStmt, data interface{}) {
 	p.buf.WriteString("(if\n")
 	p.indent++
@@ -429,6 +438,40 @@ func (p *prettyprinter) VisitForStmt(node *ast.ForStmt, data interface{}) {
 	}
 
 	node.Body.Accept(p, nil)
+	p.indent--
+	p.buf.WriteString(")")
+}
+
+func (p *prettyprinter) VisitRecoverBlock(node *ast.RecoverBlock, data interface{}) {
+	p.buf.WriteString(fmt.Sprintf("(recover %s ", node.Id.Value))
+	node.Block.Accept(p, nil)
+	p.buf.WriteString(")")
+}
+
+func (p *prettyprinter) VisitTryRecoverStmt(node *ast.TryRecoverStmt, data interface{}) {
+	p.buf.WriteString("(try\n")
+	p.indent++
+
+	if node.Try != nil {
+		p.doIndent()
+		p.buf.WriteString("try: ")
+		node.Try.Accept(p, nil)
+		p.buf.WriteString("\n")
+	}
+
+	if node.Recover != nil {
+		p.doIndent()
+		p.buf.WriteString("recover: ")
+		node.Recover.Accept(p, nil)
+		p.buf.WriteString("\n")
+	}
+
+	p.doIndent()
+	if node.Finally != nil {
+		p.buf.WriteString("finally: ")
+		node.Finally.Accept(p, nil)
+	}
+
 	p.indent--
 	p.buf.WriteString(")")
 }

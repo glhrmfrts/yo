@@ -1,4 +1,9 @@
 // test control-flow structures
 
-var a = 5
-a = a || true
+try {
+	panic 'ERROR'
+} recover err {
+	println(err)
+} finally {
+	println('done')
+}

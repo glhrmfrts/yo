@@ -30,8 +30,11 @@ type Visitor interface {
 	VisitAssignment(node *Assignment, data interface{})
 	VisitBranchStmt(node *BranchStmt, data interface{})
 	VisitReturnStmt(node *ReturnStmt, data interface{})
+	VisitPanicStmt(node *PanicStmt, data interface{})
 	VisitIfStmt(node *IfStmt, data interface{})
 	VisitForIteratorStmt(node *ForIteratorStmt, data interface{})
 	VisitForStmt(node *ForStmt, data interface{})
+	VisitRecoverBlock(node *RecoverBlock, data interface{})
+	VisitTryRecoverStmt(node *TryRecoverStmt, data interface{})
 	VisitBlock(node *Block, data interface{})
 }
