@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/glhrmfrts/went"
+	"github.com/glhrmfrts/went"
 	"github.com/glhrmfrts/went/parse"
 	"github.com/glhrmfrts/went/pretty"
 	"io/ioutil"
@@ -25,16 +25,21 @@ func main() {
 	}
 
 	fmt.Println(pretty.SyntaxTree(root, 2))
-	/*
-		code, err := went.Compile(root, filename)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
 
-		fmt.Println(pretty.Disasm(code))
+	code, err := went.Compile(root, filename)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-		state := went.NewState()
-		state.LoadProto(code)
-	*/
+	fmt.Println(pretty.Disasm(code))
+
+	state := went.NewState()
+	val, err := state.LoadProto(code)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println(val)
 }
