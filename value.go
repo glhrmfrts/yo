@@ -50,7 +50,9 @@ type (
 
 	// Func is a function defined in the script.
 	Func struct {
-		Proto *FuncProto
+		Proto  *FuncProto
+		isGo   bool
+		goFunc GoFunc
 	}
 
 	// Array is a collection of Values stored contiguously in memory,
@@ -91,6 +93,10 @@ const (
 var (
 	valueTypeNames = [8]string{"nil", "bool", "number", "string", "func", "array", "object", "chan"}
 )
+
+func (t ValueType) String() string {
+	return valueTypeNames[t]
+}
 
 // Nil
 

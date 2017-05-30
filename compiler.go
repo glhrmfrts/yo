@@ -1101,6 +1101,10 @@ func (c *compiler) VisitReturnStmt(node *ast.ReturnStmt, data interface{}) {
 	c.emitAB(OpReturn, start, len(node.Values), node.NodeInfo.Line)
 }
 
+func (c *compiler) VisitPanicStmt(node *ast.PanicStmt, data interface{}) {
+
+}
+
 func (c *compiler) VisitIfStmt(node *ast.IfStmt, data interface{}) {
 	_, ok := data.(*exprdata)
 	if !ok {
@@ -1192,6 +1196,14 @@ func (c *compiler) VisitForStmt(node *ast.ForStmt, data interface{}) {
 		c.modifyAsBx(jmpInstr, OpJmpfalse, cond, c.labelOffset(jmpLabel))
 	}
 	c.block.loop.breakTarget = c.newLabel()
+}
+
+func (c *compiler) VisitRecoverBlock(node *ast.RecoverBlock, data interface{}) {
+
+}
+
+func (c *compiler) VisitTryRecoverStmt(node *ast.TryRecoverStmt, data interface{}) {
+
 }
 
 func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {

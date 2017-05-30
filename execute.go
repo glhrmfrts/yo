@@ -34,7 +34,7 @@ func init() {
 			if g, ok := state.Globals[str]; ok {
 				cf.r[a] = g
 			} else {
-				// throw error
+				state.setError("undefined global %s", str)
 				return 1
 			}
 			return 0
@@ -45,7 +45,7 @@ func init() {
 			if _, ok := state.Globals[str]; ok {
 				state.Globals[str] = cf.r[a]
 			} else {
-				// throw error
+				state.setError("undefined global %s", str)
 				return 1
 			}
 			return 0
@@ -66,7 +66,7 @@ func init() {
 			}
 			f, ok := bv.assertFloat64()
 			if !ok {
-				// throw error
+				state.setError("cannot perform unary minus on %s", bv.Type())
 				return 1
 			}
 			cf.r[a] = Number(-f)
@@ -93,7 +93,7 @@ func init() {
 			}
 			f, ok := bv.assertFloat64()
 			if !ok || isInt(f) {
-				// throw error
+				state.setError("cannot perform complement on %s", bv.Type())
 				return 1
 			}
 			cf.r[a] = Number(float64(^int(f)))
@@ -313,6 +313,7 @@ func opCmp(state *State, cf *callFrame, instr uint32) int {
 	return 0
 }
 
+<<<<<<< HEAD
 func callGoFunc(state *State, fn GoFunc, args []Value, numArgs uint) {
 	call := FuncCall{
 		Args: args,
@@ -322,6 +323,34 @@ func callGoFunc(state *State, fn GoFunc, args []Value, numArgs uint) {
 }
 
 func execute(state *State) {
+=======
+// Search for a call frame that is currently inside a try branch
+// and can handle the error.
+func handleError(state *State) bool {
+	var found bool
+	var frame *callFrame
+
+	sp := state.calls.sp
+	for sp >= 0 {
+		frame = &state.calls.stack[sp]
+		if frame.canRecover {
+			found = true
+			break
+		}
+		sp--
+	}
+
+	if found {
+		frame.recover()
+		state.calls.Rewind(state.calls.sp - sp)
+		state.currentFrame = frame
+	}
+
+	return found
+}
+
+func execute(state *State) bool {
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216
 	var currentLine uint32
 	cf := state.currentFrame
 	proto := cf.fn.Proto
@@ -335,7 +364,9 @@ func execute(state *State) {
 		cf.pc++
 		cf.line = int(proto.Lines[currentLine].Line)
 		if opTable[int(instr&kOpcodeMask)](state, cf, instr) == 1 {
-			break
+			if !handleError(state) {
+				return false
+			}
 		}
 
 		if state.currentFrame != cf {
@@ -345,5 +376,9 @@ func execute(state *State) {
 		proto = cf.fn.Proto
 	}
 
+<<<<<<< HEAD
 	//fmt.Println(cf.r)
+=======
+	return true
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216
 }

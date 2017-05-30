@@ -607,10 +607,16 @@ func (p *parser) stmt() ast.Node {
 		p.next()
 		values := p.exprList(false)
 		return &ast.ReturnStmt{Values: values, NodeInfo: ast.NodeInfo{line}}
+	case ast.TokenPanic:
+		p.next()
+		err := p.expr()
+		return &ast.PanicStmt{Err: err, NodeInfo: ast.NodeInfo{line}}
 	case ast.TokenIf:
 		return p.ifStmt()
 	case ast.TokenFor:
 		return p.forStmt()
+	case ast.TokenTry:
+		return p.tryRecoverStmt()
 	default:
 		return p.assignment(nil)
 	}
@@ -725,6 +731,39 @@ parseBody:
 	return &ast.ForStmt{Init: init, Cond: cond, Step: step, Body: body, NodeInfo: ast.NodeInfo{line}}
 }
 
+func (p *parser) tryRecoverStmt() ast.Node {
+	line := p.line()
+	p.next() // 'try'
+
+	tryBlock := p.block().(*ast.Block)
+
+	var recoverBlock *ast.RecoverBlock
+	if p.accept(ast.TokenRecover) {
+		line := p.line()
+
+		var id *ast.Id
+		if p.tok == ast.TokenId {
+			id = p.makeId()
+			p.next()
+		}
+
+		block := p.block().(*ast.Block)
+		recoverBlock = &ast.RecoverBlock{Id: id, Block: block, NodeInfo: ast.NodeInfo{line}}
+	}
+
+	var finallyBlock *ast.Block
+	if p.accept(ast.TokenFinally) {
+		finallyBlock = p.block().(*ast.Block)
+	}
+
+	return &ast.TryRecoverStmt{
+		Try:      tryBlock,
+		Recover:  recoverBlock,
+		Finally:  finallyBlock,
+		NodeInfo: ast.NodeInfo{line},
+	}
+}
+
 func (p *parser) block() ast.Node {
 	line := p.line()
 	if !p.accept(ast.TokenLbrace) {
@@ -753,9 +792,7 @@ func (p *parser) program() ast.Node {
 	return &ast.Block{Nodes: nodes}
 }
 
-//
 // initialization of parser
-//
 
 func (p *parser) init(source []byte, filename string) {
 	p.ignoreNewlines = true
@@ -777,7 +814,7 @@ func ParseExpr(source []byte) (expr ast.Node, err error) {
 	}()
 
 	var p parser
-	p.init(source, "")
+	p.init(source, "<expr>")
 	expr = p.expr()
 	return
 }

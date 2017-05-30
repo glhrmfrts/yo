@@ -1,6 +1,9 @@
 package went
 
-import ()
+import (
+	"fmt"
+	"github.com/glhrmfrts/went/parse"
+)
 
 const (
 	MaxRegisters  = 249
@@ -8,10 +11,11 @@ const (
 )
 
 type callFrame struct {
-	pc   int
-	line int
-	fn   *Func
-	r    [MaxRegisters]Value
+	pc         int
+	line       int
+	canRecover bool
+	fn         *Func
+	r          [MaxRegisters]Value
 }
 
 type callFrameStack struct {
@@ -19,6 +23,24 @@ type callFrameStack struct {
 	stack [CallStackSize]callFrame
 }
 
+<<<<<<< HEAD
+=======
+type RuntimeError struct {
+	Message string
+	Line    int
+	File    string
+}
+
+type State struct {
+	currentFrame *callFrame
+	calls        callFrameStack
+	error        *RuntimeError
+	Globals      map[string]Value
+}
+
+// callFrameStack
+
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216
 func (stack *callFrameStack) New() *callFrame {
 	stack.sp += 1
 	return &stack.stack[stack.sp-1]
@@ -31,6 +53,7 @@ func (stack *callFrameStack) Last() *callFrame {
 	return &stack.stack[stack.sp-1]
 }
 
+<<<<<<< HEAD
 type FuncCall struct {
 	Args    []Value
 	NumArgs uint
@@ -47,16 +70,64 @@ type State struct {
 	calls        callFrameStack
 	Globals      map[string]Value
 }
+=======
+func (stack *callFrameStack) Rewind(n int) {
+	for n > 0 {
+		n--
+		stack.sp--
+	}
+}
+
+// callFrame
+
+func (f *callFrame) recover() {
+	// TODO: implement
+}
+
+// RuntimeError
+
+func (err *RuntimeError) Error() string {
+	return fmt.Sprintf("%s:%d: %s", err.File, err.Line, err.Message)
+}
+
+// State
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216
 
 func (state *State) DefineGlobal(name string, v Value) {
 	state.Globals[name] = v
 }
 
-func (state *State) RunProto(proto *FuncProto) {
-	state.currentFrame = state.calls.New()
-	state.currentFrame.fn = &Func{proto}
+func (state *State) LoadString(source []byte, filename string) (Value, error) {
+	nodes, err := parse.ParseFile(source, filename)
+	if err != nil {
+		return nil, err
+	}
 
-	execute(state)
+	proto, err := Compile(nodes, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return state.LoadProto(proto)
+}
+
+func (state *State) LoadProto(proto *FuncProto) (Value, error) {
+	state.currentFrame = state.calls.New()
+	state.currentFrame.fn = &Func{proto, false, nil}
+
+	var err error
+	if !execute(state) {
+		err = state.error
+	}
+
+	return Nil{}, err
+}
+
+func (state *State) setError(msg string, args ...interface{}) {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+	state.error = &RuntimeError{Message: msg, Line: state.currentFrame.line, File: "test.elo"}
 }
 
 func NewState() *State {

@@ -35,7 +35,17 @@ func main() {
 	//fmt.Println(pretty.Disasm(code))
 
 	state := went.NewState()
+<<<<<<< HEAD
 	went.DefineBaseLib(state)
 
 	state.RunProto(code)
+=======
+	val, err := state.LoadProto(code)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println(val)
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216
 }

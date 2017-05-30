@@ -22,6 +22,10 @@ const (
 	TokenBreak
 	TokenContinue
 	TokenFallthrough
+	TokenTry
+	TokenRecover
+	TokenFinally
+	TokenPanic
 	TokenReturn
 	TokenNot
 	TokenIn
@@ -106,6 +110,10 @@ var (
 		"break":       TokenBreak,
 		"continue":    TokenContinue,
 		"fallthrough": TokenFallthrough,
+		"try":         TokenTry,
+		"recover":     TokenRecover,
+		"finally":     TokenFinally,
+		"panic":       TokenPanic,
 		"return":      TokenReturn,
 		"not":         TokenNot,
 		"in":          TokenIn,
@@ -127,6 +135,10 @@ var (
 		TokenBreak:       "break",
 		TokenContinue:    "continue",
 		TokenFallthrough: "fallthrough",
+		TokenTry:         "try",
+		TokenRecover:     "recover",
+		TokenFinally:     "finally",
+		TokenPanic:       "panic",
 		TokenReturn:      "return",
 		TokenNot:         "not",
 		TokenIn:          "in",

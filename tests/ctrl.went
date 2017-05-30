@@ -1,3 +1,13 @@
 // test control-flow structures
 
+<<<<<<< HEAD
 println("nice")
+=======
+try {
+	panic 'ERROR'
+} recover err {
+	println(err)
+} finally {
+	println('done')
+}
+>>>>>>> 52602272bea9b6aba2391188bc0feff5e05be216

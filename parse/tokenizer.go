@@ -320,7 +320,7 @@ func (t *tokenizer) skipWhitespace() {
 
 func (t *tokenizer) needSemi(tok ast.Token) bool {
 	return (tok == ast.TokenId || tok == ast.TokenFloat || tok == ast.TokenInt || tok == ast.TokenString ||
-		tok == ast.TokenBreak || tok == ast.TokenContinue || tok == ast.TokenReturn)
+		tok == ast.TokenBreak || tok == ast.TokenContinue || tok == ast.TokenReturn || tok == ast.TokenPanic)
 }
 
 // functions that look 1 or 2 characters ahead,
