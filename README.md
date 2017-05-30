@@ -9,7 +9,7 @@ List of things that are done and what needs to be.
 - [x] Parsing
 - [x] Syntax tree
 - [x] Compilation to bytecode
-- [ ] Register machine
+- [x] Register machine (WIP)
 - [ ] Go APIs
 - [ ] Channels and goroutines
 - [ ] Optimizations
