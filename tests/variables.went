@@ -1,3 +1,0 @@
-// test variable assignment and declaration
-
-a, b, c := 1, a, false

@@ -1,4 +1,1 @@
 // test data structures
-
-Book := {}
-a := new(Book)

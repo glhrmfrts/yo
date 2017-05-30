@@ -5,7 +5,7 @@
 package went
 
 import (
-	"fmt"
+	//"fmt"
 	"math"
 )
 
@@ -128,6 +128,15 @@ func init() {
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpCall
+			a, b, c := OpGetA(instr), OpGetB(instr), OpGetC(instr)
+			fn := cf.r[a]
+			ab := a + b
+			ac := ab + c - 1
+			args := make([]Value, c)
+			for i, r := 0, ab; r <= ac; i, r = i+1, r+1 {
+				args[i] = cf.r[r]
+			}
+			callGoFunc(state, fn.(GoFunc), args, c)
 			return 0
 		},
 		func(state *State, cf *callFrame, instr uint32) int { // OpCallMethod
@@ -304,6 +313,14 @@ func opCmp(state *State, cf *callFrame, instr uint32) int {
 	return 0
 }
 
+func callGoFunc(state *State, fn GoFunc, args []Value, numArgs uint) {
+	call := FuncCall{
+		Args: args,
+		NumArgs: numArgs,
+	}
+	fn(&call)
+}
+
 func execute(state *State) {
 	var currentLine uint32
 	cf := state.currentFrame
@@ -328,6 +345,5 @@ func execute(state *State) {
 		proto = cf.fn.Proto
 	}
 
-	fmt.Println(cf.r)
-	fmt.Println(cf.line)
+	//fmt.Println(cf.r)
 }

@@ -46,7 +46,7 @@ type (
 
 	// GoFunc is a function defined in the host application, which
 	// is callable from the script.
-	GoFunc func(*State) int
+	GoFunc func(*FuncCall)
 
 	// Func is a function defined in the script.
 	Func struct {
@@ -141,4 +141,51 @@ func (v String) Type() ValueType { return ValueString }
 func (v String) ToBool() bool    { return true }
 func (v String) String() string {
 	return string(v)
+}
+
+// GoFunc 
+
+func (v GoFunc) assertFloat64() (float64, bool) { return 0, false }
+func (v GoFunc) assertBool() (bool, bool) { return false, false }
+func (v GoFunc) assertString() (string, bool) { return "", false }
+
+func (v GoFunc) Type() ValueType { return ValueFunc }
+func (v GoFunc) ToBool() bool    { return true }
+func (v GoFunc) String() string  { return "func" }
+
+// Func
+
+func (v Func) assertFloat64() (float64, bool) { return 0, false }
+func (v Func) assertBool() (bool, bool) { return false, false }
+func (v Func) assertString() (string, bool) { return "", false }
+
+func (v Func) Type() ValueType { return ValueFunc }
+func (v Func) ToBool() bool    { return true }
+func (v Func) String() string  { return "func" }
+
+// Array
+
+func (v Array) assertFloat64() (float64, bool) { return 0, false }
+func (v Array) assertBool() (bool, bool) { return false, false }
+func (v Array) assertString() (string, bool) { return "", false }
+
+func (v Array) Type() ValueType { return ValueArray }
+func (v Array) ToBool() bool    { return true }
+func (v Array) String() string  { return fmt.Sprintf("%v", v) }
+
+// Object
+
+func (v Object) assertFloat64() (float64, bool) { return 0, false }
+func (v Object) assertBool() (bool, bool) { return false, false }
+func (v Object) assertString() (string, bool) { return "", false }
+
+func (v Object) Type() ValueType { return ValueObject }
+func (v Object) ToBool() bool    { return true }
+func (v Object) String() string  { return fmt.Sprintf("%v", v.Fields) }
+
+func NewObject(parent *Object, fields map[string]Value) *Object {
+	return &Object{
+		Parent: parent,
+		Fields: fields,
+	}
 }

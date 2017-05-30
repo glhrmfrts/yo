@@ -19,14 +19,6 @@ type callFrameStack struct {
 	stack [CallStackSize]callFrame
 }
 
-type State struct {
-	currentFrame *callFrame
-	calls        callFrameStack
-	Globals      map[string]Value
-}
-
-// callFrameStack
-
 func (stack *callFrameStack) New() *callFrame {
 	stack.sp += 1
 	return &stack.stack[stack.sp-1]
@@ -39,7 +31,22 @@ func (stack *callFrameStack) Last() *callFrame {
 	return &stack.stack[stack.sp-1]
 }
 
-// State
+type FuncCall struct {
+	Args    []Value
+	NumArgs uint
+
+	results []Value
+}
+
+func (c *FuncCall) PushReturnValue(v Value) {
+	c.results = append(c.results, v)
+}
+
+type State struct {
+	currentFrame *callFrame
+	calls        callFrameStack
+	Globals      map[string]Value
+}
 
 func (state *State) DefineGlobal(name string, v Value) {
 	state.Globals[name] = v
@@ -53,7 +60,9 @@ func (state *State) RunProto(proto *FuncProto) {
 }
 
 func NewState() *State {
-	return &State{
+	s := &State{
 		Globals: make(map[string]Value, 128),
 	}
+
+	return s
 }
