@@ -38,7 +38,7 @@ package parse
 
 import (
 	"fmt"
-	"github.com/glhrmfrts/went/ast"
+	"github.com/glhrmfrts/yo/ast"
 	"os"
 	"unicode"
 	"unicode/utf8"

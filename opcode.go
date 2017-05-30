@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package went
+package yo
 
 // vm instruction details and implementation.
 //

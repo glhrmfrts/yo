@@ -7,7 +7,7 @@ package pretty
 import (
 	"bytes"
 	"fmt"
-	"github.com/glhrmfrts/went/ast"
+	"github.com/glhrmfrts/yo/ast"
 )
 
 type prettyprinter struct {

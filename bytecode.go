@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package went
+package yo
 
 type LineInfo struct {
 	Instr uint32 // the instruction index
@@ -10,7 +10,7 @@ type LineInfo struct {
 // Contains executable code by the VM and
 // static information generated at compilation time.
 // All runtime functions reference one of these
-type FuncProto struct {
+type Bytecode struct {
 	Source    string
 	NumConsts uint32
 	NumCode   uint32
@@ -19,15 +19,15 @@ type FuncProto struct {
 	Consts    []Value
 	Code      []uint32
 	Lines     []LineInfo
-	Funcs     []*FuncProto
+	Funcs     []*Bytecode
 }
 
 const (
-	funcMaxConsts = 0xffff
+	bytecodeMaxConsts = 0xffff
 )
 
-func newFuncProto(source string) *FuncProto {
-	return &FuncProto{
+func newBytecode(source string) *Bytecode {
+	return &Bytecode{
 		Source: source,
 	}
 }

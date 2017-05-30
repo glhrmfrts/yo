@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package went
+package yo
 
 import (
 	"fmt"
@@ -50,9 +50,7 @@ type (
 
 	// Func is a function defined in the script.
 	Func struct {
-		Proto  *FuncProto
-		isGo   bool
-		goFunc GoFunc
+		Bytecode *Bytecode
 	}
 
 	// Array is a collection of Values stored contiguously in memory,
@@ -84,6 +82,7 @@ const (
 	ValueBool
 	ValueNumber
 	ValueString
+	ValueGoFunc
 	ValueFunc
 	ValueArray
 	ValueObject
@@ -91,7 +90,7 @@ const (
 )
 
 var (
-	valueTypeNames = [8]string{"nil", "bool", "number", "string", "func", "array", "object", "chan"}
+	valueTypeNames = [9]string{"nil", "bool", "number", "string", "func", "func", "array", "object", "chan"}
 )
 
 func (t ValueType) String() string {
@@ -149,13 +148,13 @@ func (v String) String() string {
 	return string(v)
 }
 
-// GoFunc 
+// GoFunc
 
 func (v GoFunc) assertFloat64() (float64, bool) { return 0, false }
 func (v GoFunc) assertBool() (bool, bool) { return false, false }
 func (v GoFunc) assertString() (string, bool) { return "", false }
 
-func (v GoFunc) Type() ValueType { return ValueFunc }
+func (v GoFunc) Type() ValueType { return ValueGoFunc }
 func (v GoFunc) ToBool() bool    { return true }
 func (v GoFunc) String() string  { return "func" }
 

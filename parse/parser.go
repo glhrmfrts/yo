@@ -4,7 +4,7 @@ package parse
 
 import (
 	"fmt"
-	"github.com/glhrmfrts/went/ast"
+	"github.com/glhrmfrts/yo/ast"
 	"strconv"
 )
 

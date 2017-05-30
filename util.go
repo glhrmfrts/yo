@@ -1,6 +1,6 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package went
+package yo
 
 import (
 	"fmt"
@@ -35,4 +35,8 @@ func parseNumber(number string) (float64, error) {
 		value = float64(v)
 	}
 	return value, nil
+}
+
+func println(v ...interface{}) {
+	fmt.Println(v...)
 }

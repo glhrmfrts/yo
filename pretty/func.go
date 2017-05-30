@@ -8,7 +8,7 @@ package pretty
 import (
 	"bytes"
 	"fmt"
-	"github.com/glhrmfrts/went"
+	"github.com/glhrmfrts/yo"
 )
 
 func doIndent(buf *bytes.Buffer, indent int) {
@@ -18,7 +18,7 @@ func doIndent(buf *bytes.Buffer, indent int) {
 	}
 }
 
-func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
+func disasmImpl(f *yo.Bytecode, buf *bytes.Buffer, indent int) {
 	buf.WriteString("\n\n")
 	doIndent(buf, indent)
 	buf.WriteString(fmt.Sprintf("function at %s {{{\n", f.Source))
@@ -40,8 +40,8 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 	buf.WriteString("line\t#\topcode\t\targs\n")
 
 	getRegOrConst := func(a uint) string {
-		if a >= went.OpConstOffset {
-			return fmt.Sprint(f.Consts[a-went.OpConstOffset])
+		if a >= yo.OpConstOffset {
+			return fmt.Sprint(f.Consts[a-yo.OpConstOffset])
 		} else {
 			return fmt.Sprintf("!%d", a)
 		}
@@ -57,7 +57,7 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 		}
 
 		line := f.Lines[currentLine]
-		opcode := went.OpGetOpcode(instr)
+		opcode := yo.OpGetOpcode(instr)
 		pc := i + 1
 
 		if lineChanged || i == 0 {
@@ -70,55 +70,55 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 		buf.WriteString(fmt.Sprint("\t", opcode, "\t"))
 
 		switch opcode {
-		case went.OpLoadnil:
-			buf.WriteString(fmt.Sprintf("\t!%d !%d", went.OpGetA(instr), went.OpGetB(instr)))
-		case went.OpLoadconst:
-			buf.WriteString(fmt.Sprintf("!%d %s", went.OpGetA(instr), f.Consts[went.OpGetBx(instr)]))
-		case went.OpUnm, went.OpNot, went.OpCmpl:
-			bx := went.OpGetBx(instr)
+		case yo.OpLoadnil:
+			buf.WriteString(fmt.Sprintf("\t!%d !%d", yo.OpGetA(instr), yo.OpGetB(instr)))
+		case yo.OpLoadconst:
+			buf.WriteString(fmt.Sprintf("!%d %s", yo.OpGetA(instr), f.Consts[yo.OpGetBx(instr)]))
+		case yo.OpUnm, yo.OpNot, yo.OpCmpl:
+			bx := yo.OpGetBx(instr)
 			bstr := getRegOrConst(bx)
-			buf.WriteString(fmt.Sprintf("\t!%d %s", went.OpGetA(instr), bstr))
-		case went.OpAdd, went.OpSub, went.OpMul, went.OpDiv, went.OpPow, went.OpShl, went.OpShr,
-			went.OpAnd, went.OpOr, went.OpXor, went.OpLe, went.OpLt, went.OpEq, went.OpNe,
-			went.OpGetIndex, went.OpSetIndex:
-			a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
+			buf.WriteString(fmt.Sprintf("\t!%d %s", yo.OpGetA(instr), bstr))
+		case yo.OpAdd, yo.OpSub, yo.OpMul, yo.OpDiv, yo.OpPow, yo.OpShl, yo.OpShr,
+			yo.OpAnd, yo.OpOr, yo.OpXor, yo.OpLe, yo.OpLt, yo.OpEq, yo.OpNe,
+			yo.OpGetIndex, yo.OpSetIndex:
+			a, b, c := yo.OpGetA(instr), yo.OpGetB(instr), yo.OpGetC(instr)
 			bstr, cstr := getRegOrConst(b), getRegOrConst(c)
 			buf.WriteString(fmt.Sprintf("\t!%d %s %s", a, bstr, cstr))
-		case went.OpAppend, went.OpReturn:
-			a, b := went.OpGetA(instr), went.OpGetB(instr)
+		case yo.OpAppend, yo.OpReturn:
+			a, b := yo.OpGetA(instr), yo.OpGetB(instr)
 			buf.WriteString(fmt.Sprintf("\t!%d #%d", a, b))
-		case went.OpMove:
-			a, b := went.OpGetA(instr), went.OpGetB(instr)
+		case yo.OpMove:
+			a, b := yo.OpGetA(instr), yo.OpGetB(instr)
 			buf.WriteString(fmt.Sprintf("\t!%d !%d", a, b))
-		case went.OpLoadglobal, went.OpSetglobal:
-			a, bx := went.OpGetA(instr), went.OpGetBx(instr)
+		case yo.OpLoadglobal, yo.OpSetglobal:
+			a, bx := yo.OpGetA(instr), yo.OpGetBx(instr)
 			buf.WriteString(fmt.Sprintf("!%d %s", a, f.Consts[bx]))
-		case went.OpLoadFree, went.OpSetFree:
-			a, bx := went.OpGetA(instr), went.OpGetBx(instr)
+		case yo.OpLoadFree, yo.OpSetFree:
+			a, bx := yo.OpGetA(instr), yo.OpGetBx(instr)
 			buf.WriteString(fmt.Sprintf("\t!%d %s", a, f.Consts[bx]))
-		case went.OpCall, went.OpCallmethod:
-			a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
-			if opcode == went.OpCall {
+		case yo.OpCall, yo.OpCallmethod:
+			a, b, c := yo.OpGetA(instr), yo.OpGetB(instr), yo.OpGetC(instr)
+			if opcode == yo.OpCall {
 				buf.WriteString(fmt.Sprintf("\t!%d #%d #%d", a, b, c))
 			} else {
 				buf.WriteString(fmt.Sprintf("!%d #%d #%d", a, b, c))
 			}
-		case went.OpArray, went.OpObject:
-			buf.WriteString(fmt.Sprintf("\t!%d", went.OpGetA(instr)))
-		case went.OpFunc:
-			buf.WriteString(fmt.Sprintf("\t!%d &%d", went.OpGetA(instr), went.OpGetBx(instr)))
-		case went.OpJmp:
-			sbx := went.OpGetsBx(instr)
+		case yo.OpArray, yo.OpObject:
+			buf.WriteString(fmt.Sprintf("\t!%d", yo.OpGetA(instr)))
+		case yo.OpFunc:
+			buf.WriteString(fmt.Sprintf("\t!%d &%d", yo.OpGetA(instr), yo.OpGetBx(instr)))
+		case yo.OpJmp:
+			sbx := yo.OpGetsBx(instr)
 			buf.WriteString(fmt.Sprintf("\t->%d", pc+sbx))
-		case went.OpJmptrue, went.OpJmpfalse:
-			a, sbx := went.OpGetA(instr), went.OpGetsBx(instr)
+		case yo.OpJmptrue, yo.OpJmpfalse:
+			a, sbx := yo.OpGetA(instr), yo.OpGetsBx(instr)
 			astr := getRegOrConst(a)
 			buf.WriteString(fmt.Sprintf("%s ->%d", astr, pc+sbx))
-		case went.OpForbegin:
-			a, b := went.OpGetA(instr), went.OpGetB(instr)
+		case yo.OpForbegin:
+			a, b := yo.OpGetA(instr), yo.OpGetB(instr)
 			buf.WriteString(fmt.Sprintf("!%d !%d", a, b))
-		case went.OpForiter:
-			a, b, c := went.OpGetA(instr), went.OpGetB(instr), went.OpGetC(instr)
+		case yo.OpForiter:
+			a, b, c := yo.OpGetA(instr), yo.OpGetB(instr), yo.OpGetC(instr)
 			buf.WriteString(fmt.Sprintf("\t!%d !%d !%d", a, b, c))
 		}
 
@@ -129,7 +129,7 @@ func disasmImpl(f *went.FuncProto, buf *bytes.Buffer, indent int) {
 	buf.WriteString("}}}\n\n\n")
 }
 
-func Disasm(f *went.FuncProto) string {
+func Disasm(f *yo.Bytecode) string {
 	var buf bytes.Buffer
 	disasmImpl(f, &buf, 0)
 	return buf.String()

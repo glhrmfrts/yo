@@ -1,10 +1,10 @@
 // Copyright 2016 Guilherme Nemeth <guilherme.nemeth@gmail.com>
 
-package went
+package yo
 
 import (
 	"fmt"
-	"github.com/glhrmfrts/went/ast"
+	"github.com/glhrmfrts/yo/ast"
 	"math"
 )
 
@@ -49,14 +49,14 @@ type (
 		register int
 		names    map[string]*nameInfo
 		loop     *loopInfo
-		proto    *FuncProto
+		bytecode *Bytecode
 		parent   *compilerBlock
 	}
 
 	compiler struct {
 		lastLine int
 		filename string
-		mainFunc *FuncProto
+		mainFunc *Bytecode
 		block    *compilerBlock
 	}
 )
@@ -85,9 +85,9 @@ func (err *CompileError) Error() string {
 
 // compilerBlock
 
-func newCompilerBlock(proto *FuncProto, context blockContext, parent *compilerBlock) *compilerBlock {
+func newCompilerBlock(bytecode *Bytecode, context blockContext, parent *compilerBlock) *compilerBlock {
 	return &compilerBlock{
-		proto:   proto,
+		bytecode:   bytecode,
 		context: context,
 		parent:  parent,
 		names:   make(map[string]*nameInfo, 128),
@@ -126,7 +126,7 @@ func (c *compiler) error(line int, msg string) {
 }
 
 func (c *compiler) emitInstruction(instr uint32, line int) int {
-	f := c.block.proto
+	f := c.block.bytecode
 	f.Code = append(f.Code, instr)
 	f.NumCode++
 
@@ -139,7 +139,7 @@ func (c *compiler) emitInstruction(instr uint32, line int) int {
 }
 
 func (c *compiler) modifyInstruction(index int, instr uint32) bool {
-	f := c.block.proto
+	f := c.block.bytecode
 	if uint32(index) < f.NumCode {
 		f.Code[index] = instr
 		return true
@@ -172,11 +172,11 @@ func (c *compiler) modifyAsBx(index int, op Opcode, a, b int) bool {
 }
 
 func (c *compiler) newLabel() uint32 {
-	return c.block.proto.NumCode
+	return c.block.bytecode.NumCode
 }
 
 func (c *compiler) labelOffset(label uint32) int {
-	return int(c.block.proto.NumCode - label)
+	return int(c.block.bytecode.NumCode - label)
 }
 
 func (c *compiler) genRegister() int {
@@ -194,7 +194,7 @@ func (c *compiler) declareLocalVar(name string, reg int) {
 
 func (c *compiler) enterBlock(context blockContext) {
 	assert(c.block != nil, "c.block enterBlock")
-	block := newCompilerBlock(c.block.proto, context, c.block)
+	block := newCompilerBlock(c.block.bytecode, context, c.block)
 	block.register = c.block.register
 
 	if context == kBlockContextLoop {
@@ -233,17 +233,17 @@ func (c *compiler) insideLoop() bool {
 	return false
 }
 
-// Add a constant to the current prototype's constant pool
+// Add a constant to the current bytecodetype's constant pool
 // and return it's index
 func (c *compiler) addConst(value Value) int {
-	f := c.block.proto
+	f := c.block.bytecode
 	valueType := value.Type()
 	for i, c := range f.Consts {
 		if c.Type() == valueType && c == value {
 			return i
 		}
 	}
-	if f.NumConsts > funcMaxConsts-1 {
+	if f.NumConsts > bytecodeMaxConsts-1 {
 		c.error(0, "too many constants") // should never happen
 	}
 	f.Consts = append(f.Consts, value)
@@ -502,7 +502,7 @@ func (c *compiler) branchConditionHelper(cond, then, else_ ast.Node, reg int) {
 }
 
 func (c *compiler) functionReturnGuard() {
-	last := c.block.proto.Code[c.block.proto.NumCode-1]
+	last := c.block.bytecode.Code[c.block.bytecode.NumCode-1]
 	if OpGetOpcode(last) != OpReturn {
 		c.emitAB(OpReturn, 0, 0, c.lastLine)
 	}
@@ -682,14 +682,14 @@ func (c *compiler) VisitFunction(node *ast.Function, data interface{}) {
 	} else {
 		reg = c.genRegister()
 	}
-	parent := c.block.proto
-	proto := newFuncProto(parent.Source)
+	parent := c.block.bytecode
+	bytecode := newBytecode(parent.Source)
 
-	block := newCompilerBlock(proto, kBlockContextFunc, c.block)
+	block := newCompilerBlock(bytecode, kBlockContextFunc, c.block)
 	c.block = block
 
 	index := int(parent.NumFuncs)
-	parent.Funcs = append(parent.Funcs, proto)
+	parent.Funcs = append(parent.Funcs, bytecode)
 	parent.NumFuncs++
 
 	// insert 'this' into scope
@@ -1221,7 +1221,7 @@ func (c *compiler) VisitBlock(node *ast.Block, data interface{}) {
 // Any type of Node is accepted, either a block representing the program
 // or a single expression.
 //
-func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
+func Compile(root ast.Node, filename string) (res *Bytecode, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if cerr, ok := r.(*CompileError); ok {
@@ -1234,7 +1234,7 @@ func Compile(root ast.Node, filename string) (res *FuncProto, err error) {
 
 	var c compiler
 	c.filename = filename
-	c.mainFunc = newFuncProto(filename)
+	c.mainFunc = newBytecode(filename)
 	c.block = newCompilerBlock(c.mainFunc, kBlockContextFunc, nil)
 
 	root.Accept(&c, nil)
