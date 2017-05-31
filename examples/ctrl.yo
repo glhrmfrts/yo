@@ -1,3 +1,0 @@
-// test control-flow structures
-
-println(println(2))

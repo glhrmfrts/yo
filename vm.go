@@ -333,10 +333,12 @@ func opCmp(vm *VM, cf *callFrame, instr uint32) int {
 	} else {
 		vc = cf.r[c]
 	}
+
 	if (vb.Type() != ValueNil && vc.Type() != ValueNil) && vb.Type() != vc.Type() {
-		// throw error
-		return 1
+		cf.r[a] = Bool(false)
+		return 0
 	}
+
 	op := OpGetOpcode(instr)
 	var res bool
 	switch vb.Type() {

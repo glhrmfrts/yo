@@ -312,6 +312,13 @@ func (c *compiler) constFold(node ast.Node) (Value, bool) {
 		if leftOk && rightOk {
 			var ret Value
 			if left.Type() != right.Type() {
+				if t.Op == ast.TokenEqeq {
+					return Bool(false), true
+				}
+				if t.Op == ast.TokenBangeq {
+					return Bool(true), true
+				}
+
 				return nil, false
 			}
 			lf64, ok := left.assertFloat64()

@@ -202,9 +202,16 @@ var (
 	}
 )
 
-func Keyword(lit string) (Token, bool) {
-	t, ok := keywords[lit]
-	return t, ok
+func IsAssignOp(tok Token) bool {
+	return tok >= assignOpBegin && tok <= assignOpEnd
+}
+
+func IsBinaryOp(tok Token) bool {
+	return tok >= binaryOpBegin && tok <= binaryOpEnd
+}
+
+func IsEqualityOp(tok Token) bool {
+	return (tok == TokenEqeq || tok == TokenBangeq)
 }
 
 func IsPostfixOp(tok Token) bool {
@@ -214,14 +221,6 @@ func IsPostfixOp(tok Token) bool {
 func IsUnaryOp(tok Token) bool {
 	return IsPostfixOp(tok) ||
 		(tok == TokenNot || tok == TokenBang || tok == TokenMinus || tok == TokenPlus || tok == TokenTilde)
-}
-
-func IsBinaryOp(tok Token) bool {
-	return tok >= binaryOpBegin && tok <= binaryOpEnd
-}
-
-func IsAssignOp(tok Token) bool {
-	return tok >= assignOpBegin && tok <= assignOpEnd
 }
 
 func CompoundOp(tok Token) Token {
@@ -242,6 +241,11 @@ func CompoundOp(tok Token) Token {
 		return TokenTilde
 	}
 	return Token(-1)
+}
+
+func Keyword(lit string) (Token, bool) {
+	t, ok := keywords[lit]
+	return t, ok
 }
 
 func Precedence(tok Token) int {
