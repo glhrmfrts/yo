@@ -64,7 +64,7 @@ type (
 // names lexical scopes
 const (
 	kScopeLocal scope = iota
-	kScopeRef
+	kScopeClosure
 	kScopeGlobal
 )
 
@@ -101,7 +101,7 @@ func (b *compilerBlock) nameInfo(name string) (*nameInfo, bool) {
 		info, ok := block.names[name]
 		if ok {
 			if closures > 0 && info.scope == kScopeLocal {
-				info.scope = kScopeRef
+				info.scope = kScopeClosure
 			}
 			return info, true
 		}
@@ -460,9 +460,9 @@ func (c *compiler) assignmentHelper(left ast.Node, assignReg int, valueReg int) 
 		switch scope {
 		case kScopeLocal:
 			c.emitAB(OpMove, info.reg, valueReg, v.NodeInfo.Line)
-		case kScopeRef, kScopeGlobal:
+		case kScopeClosure, kScopeGlobal:
 			op := OpSetglobal
-			if scope == kScopeRef {
+			if scope == kScopeClosure {
 				op = OpSetFree
 			}
 			c.emitABx(op, valueReg, c.addConst(String(v.Value)), v.NodeInfo.Line)
@@ -608,9 +608,9 @@ func (c *compiler) VisitId(node *ast.Id, data interface{}) {
 			return
 		}
 		c.emitAB(OpMove, reg, info.reg, node.NodeInfo.Line)
-	case kScopeRef, kScopeGlobal:
+	case kScopeClosure, kScopeGlobal:
 		op := OpLoadglobal
-		if scope == kScopeRef {
+		if scope == kScopeClosure {
 			op = OpLoadFree
 		}
 		c.emitABx(op, reg, c.addConst(String(node.Value)), node.NodeInfo.Line)
@@ -1078,7 +1078,7 @@ func (c *compiler) VisitAssignment(node *ast.Assignment, data interface{}) {
 		valueReg := start + i
 
 		// don't touch variables without a corresponding value
-		if valueReg >= current {
+		if valueReg > current {
 			break
 		}
 		c.assignmentHelper(variable, current+1, valueReg)

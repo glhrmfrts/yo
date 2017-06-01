@@ -224,8 +224,9 @@ func init() {
 			a, b := OpGetA(instr), OpGetB(instr)
 			from := a + 1
 			to := from + b
-			arr := &cf.r[a]
-			*arr = append((*arr).(Array), cf.r[from:to]...)
+			ptr := cf.r[a]
+			arr := ptr.(*Array)
+			*arr = append(*arr, cf.r[from:to]...)
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpCall
@@ -240,7 +241,8 @@ func init() {
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpArray
-			cf.r[OpGetA(instr)] = Array([]Value{})
+			arr := Array([]Value{})
+			cf.r[OpGetA(instr)] = &arr
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpObject
