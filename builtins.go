@@ -7,12 +7,13 @@ import (
 func defineBuiltins(vm *VM) {
 	vm.Define("append", GoFunc(builtinAppend))
 	vm.Define("isnumber", GoFunc(builtinIsNumber))
+	vm.Define("len", GoFunc(builtinLen))
 	vm.Define("println", GoFunc(builtinPrintln))
 	vm.Define("type", GoFunc(builtinType))
 }
 
 func builtinAppend(call *FuncCall) {
-	if call.NumArgs <= uint(0) {
+	if call.NumArgs == uint(0) {
 		return
 	}
 
@@ -28,6 +29,15 @@ func builtinIsNumber(call *FuncCall) {
 		call.PushReturnValue(Bool(false))
 	} else {
 		call.PushReturnValue(Bool(call.Args[0].Type() == ValueNumber))
+	}
+}
+
+func builtinLen(call *FuncCall) {
+	if call.NumArgs == uint(0) {
+		panic("len expects 1 argument")
+	} else {
+		n := len(*(call.Args[0].(*Array)))
+		call.PushReturnValue(Number(n))
 	}
 }
 
