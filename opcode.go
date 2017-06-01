@@ -23,7 +23,7 @@ const (
 	OpLoadnil    Opcode = iota //  R(A) ... R(B) = nil
 	OpLoadconst                //  R(A) = K(Bx)
 	OpLoadglobal               //  R(A) = globals[K(Bx)]
-	OpSetglobal                //  globals[K(Bx)] = R(A)
+	OpSetglobal                //  TODO: remove this opcode
 	OpLoadFree                 //  R(A) = refs[K(Bx)]
 	OpSetFree                  //  refs[K(Bx)] = R(A)
 

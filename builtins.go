@@ -16,8 +16,8 @@ func builtinAppend(call *FuncCall) {
 		return
 	}
 
-	arr := &call.Args[0]
-	*arr = append((*arr).(Array), call.Args[1:]...)
+	arr := call.Args[0]
+	call.PushReturnValue(append(arr.(Array), call.Args[1:]...))
 }
 
 func builtinIsNumber(call *FuncCall) {

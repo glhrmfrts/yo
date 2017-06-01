@@ -60,8 +60,8 @@ type (
 	// Object is a map that maps strings to Values, and may have a
 	// parent Object which is used to look for keys that are not in it's own map.
 	Object struct {
-		Parent *Object
-		Fields map[string]Value
+		Fields  map[string]Value
+		Parent  *Object
 	}
 
 	// GoObject is an object that allows the host application to maintain
@@ -176,17 +176,21 @@ func (v Array) assertString() (string, bool) { return "", false }
 
 func (v Array) Type() ValueType { return ValueArray }
 func (v Array) ToBool() bool    { return true }
-func (v Array) String() string  { return fmt.Sprintf("%v", v) }
+func (v Array) String() string  {
+	return fmt.Sprintf("%v", []Value(v))
+}
 
 // Object
 
-func (v Object) assertFloat64() (float64, bool) { return 0, false }
-func (v Object) assertBool() (bool, bool) { return false, false }
-func (v Object) assertString() (string, bool) { return "", false }
+func (v *Object) assertFloat64() (float64, bool) { return 0, false }
+func (v *Object) assertBool() (bool, bool) { return false, false }
+func (v *Object) assertString() (string, bool) { return "", false }
 
-func (v Object) Type() ValueType { return ValueObject }
-func (v Object) ToBool() bool    { return true }
-func (v Object) String() string  { return fmt.Sprintf("%v", v.Fields) }
+func (v *Object) Type() ValueType { return ValueObject }
+func (v *Object) ToBool() bool    { return true }
+func (v *Object) String() string  {
+	return fmt.Sprintf("%v", v.Fields)
+}
 
 func NewObject(parent *Object, fields map[string]Value) *Object {
 	return &Object{

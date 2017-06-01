@@ -123,14 +123,7 @@ func init() {
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpSetGlobal
-			a, bx := OpGetA(instr), OpGetBx(instr)
-			str := cf.fn.Bytecode.Consts[bx].String()
-			if _, ok := vm.Globals[str]; ok {
-				vm.Globals[str] = cf.r[a]
-			} else {
-				//vm.setError("undefined global %s", str)
-				return 1
-			}
+			// TODO: remove this instruction
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpLoadRef
@@ -202,12 +195,37 @@ func init() {
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpGetIndex
+			a, b, c := OpGetA(instr), OpGetB(instr), OpGetC(instr)
+			v := cf.r[b]
+			if v.Type() == ValueArray {
+				var index Value
+				if c >= OpConstOffset {
+					index = cf.fn.Bytecode.Consts[c - OpConstOffset]
+				} else {
+					index = cf.r[c]
+				}
+
+				arr := []Value(v.(Array))
+				n, ok := index.assertFloat64()
+				if !ok {
+					// panic
+					return 1
+				}
+
+				cf.r[a] = arr[int(n)]
+			}
+
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpSetIndex
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpAppend
+			a, b := OpGetA(instr), OpGetB(instr)
+			from := a + 1
+			to := from + b
+			arr := &cf.r[a]
+			*arr = append((*arr).(Array), cf.r[from:to]...)
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpCall
@@ -222,9 +240,11 @@ func init() {
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpArray
+			cf.r[OpGetA(instr)] = Array([]Value{})
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpObject
+			cf.r[OpGetA(instr)] = NewObject(nil, make(map[string]Value))
 			return 0
 		},
 		func(vm *VM, cf *callFrame, instr uint32) int { // OpFunc
